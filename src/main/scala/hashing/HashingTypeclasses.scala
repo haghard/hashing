@@ -3,16 +3,13 @@ package hashing
 import java.nio.ByteBuffer
 import java.util
 import java.util.concurrent.ConcurrentSkipListSet
-
 import scala.collection.immutable.SortedSet
-import scala.reflect.ClassTag
 
-object Hashing2 {
+object HashingTypeclasses {
 
-  trait Hashing[Node] {
-    protected val hash = scala.util.hashing.MurmurHash3
-
-    def initNodes(nodes: util.Collection[Node]): Hashing[Node] = {
+  @simulacrum.typeclass trait Hashing[Node] {
+    def name: String
+    def withNodes(nodes: util.Collection[Node]): Hashing[Node] = {
       val iter = nodes.iterator
       while (iter.hasNext) {
         addNode(iter.next)
@@ -31,7 +28,9 @@ object Hashing2 {
     def validated(node: Node): Boolean
   }
 
-  trait Rendezvous[Node] extends Hashing[Node] {
+  @simulacrum.typeclass trait Rendezvous[Node] extends Hashing[Node] {
+    override val name = "rendezvous-hash"
+    protected val hash = scala.util.hashing.MurmurHash3
     protected val members: ConcurrentSkipListSet[Node] = new ConcurrentSkipListSet[Node]()
 
     case class Item(hash: Int, node: Node)
@@ -58,7 +57,6 @@ object Hashing2 {
         val keyBytes = key.getBytes
         val nodeBytes = toBinary(node)
         val bytes = ByteBuffer.allocate(keyBytes.length + nodeBytes.length).put(keyBytes).put(nodeBytes).array()
-        //val hash =  new BigInteger(1, bytes.md5.bytes).intValue()
         val hash0 = hash.arrayHash(bytes)
         allHashes = allHashes + Item(hash0, node)
       }
@@ -66,9 +64,11 @@ object Hashing2 {
     }
   }
 
-  trait Consistent[Node] extends Hashing[Node] {
+  @simulacrum.typeclass trait Consistent[Node] extends Hashing[Node] {
     import java.util.{ SortedMap ⇒ JSortedMap, TreeMap ⇒ JTreeMap }
 
+    override val name = "consistent-hash"
+    protected val hash = scala.util.hashing.MurmurHash3
     protected val ring: JSortedMap[Int, Node] = new JTreeMap[Int, Node]()
 
     override def removeNode(node: Node): Boolean = {
@@ -99,50 +99,34 @@ object Hashing2 {
     }
   }
 
-  implicit val a00 = new Consistent[String] {
-    override def toBinary(node: String): Array[Byte] = node.getBytes("UTB-8")
-    override def validated(node: String): Boolean = true
+  object Consistent {
+    implicit def instance = new Consistent[String] {
+      override def toBinary(node: String): Array[Byte] = node.getBytes("utf-8")
+      override def validated(node: String): Boolean = true
+    }
   }
 
-  implicit val b00 = new Rendezvous[String] {
-    override def toBinary(node: String): Array[Byte] = node.getBytes("UTB-8")
-    override def validated(node: String): Boolean = true
+  object Rendezvous {
+    implicit def instance = new Rendezvous[String] {
+      override def toBinary(node: String): Array[Byte] = node.getBytes("utf-8")
+      override def validated(node: String): Boolean = true
+    }
+  }
+
+  /*
+  sealed trait HashingRouter[A <: Hashing[N], N] {
+    def withNodes(nodes: Set[N]): A
   }
 
   sealed trait HashingRouter[F[_] <: Hashing[_], N] {
     def apply(nodes: util.Collection[N]): F[N]
   }
-
-  /*
-    sealed trait HashingRouter[A <: Hashing[N], N] {
-      def withNodes(nodes: util.Collection[N]): A
-    }
+  sealed trait HashingRouter[A <: Hashing[N], N] {
+    def withNodes(nodes: util.Collection[N]): A
+  }
   */
 
-  object HashingRouter {
-    /*
-    final def apply[A <: Hashing[N], N](implicit alg: A) = {
-      new HashingRouter[A, N] {
-        override def withNodes(nodes: util.Collection[N]): A = {
-          alg.initNodes(nodes)
-          alg
-        }
-      }
-    }*/
-
-    final def apply[F[_] <: Hashing[_], T](implicit tag: ClassTag[F[_]], alg: F[T]) = {
-      new HashingRouter[F, T] {
-        override def apply(nodes: util.Collection[T]) = {
-          alg.initNodes(nodes)
-        }
-      }
-    }
-  }
-
-  HashingRouter[Consistent, String].apply(new util.ArrayList[String]("a","b"))
-
   /*
-
   trait HashRouter {
     type T
     type F[T] <: Hashing[T]

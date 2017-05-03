@@ -12,6 +12,8 @@ libraryDependencies ++= Dependencies.Test.all
 
 enablePlugins(JavaAppPackaging)
 
+addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
+
 updateOptions := updateOptions.value.withCachedResolution(true)
 
 SbtScalariform.scalariformSettings

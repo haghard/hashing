@@ -15,7 +15,9 @@ object Dependencies {
     val zipkinSender = "io.zipkin.reporter" % "zipkin-sender-okhttp3" % "0.7.0"
     val brave = "io.zipkin.brave" % "brave" % "4.2.0"
 
-    val all = Seq(akkaActor, hasher, brave, zipkinSender, opentracing)
+    val simulacrum = "com.github.mpilquist"    %%   "simulacrum"  %  "0.10.0"
+
+    val all = Seq(akkaActor, hasher, brave, zipkinSender, opentracing, simulacrum)
   }
 
   object Test {

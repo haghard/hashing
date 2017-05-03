@@ -41,7 +41,7 @@ import hashing.Hashing.{ ConsistentHashing, HashingRouter, RendezvousHashing }
 //https://github.com/openzipkin/brave/blob/master/brave/README.md
 //https://github.com/openzipkin/zipkin-finagle-example
 
-//sbt test:runMain io.sherlock.CompareHashing
+//sbt runMain hashing.CompareHashing
 object CompareHashing {
   val keysNum = 500000
 
