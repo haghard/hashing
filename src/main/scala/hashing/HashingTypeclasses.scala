@@ -3,7 +3,9 @@ package hashing
 import java.nio.ByteBuffer
 import java.util
 import java.util.concurrent.ConcurrentSkipListSet
+
 import scala.collection.immutable.SortedSet
+import scala.reflect.ClassTag
 
 object HashingTypeclasses {
 
@@ -113,11 +115,19 @@ object HashingTypeclasses {
     }
   }
 
-  /*
-  sealed trait HashingRouter[A <: Hashing[N], N] {
-    def withNodes(nodes: Set[N]): A
+  sealed trait HashingRouter[A <: Hashing[N], N] {}
+
+  object HashingRouter {
+    def apply[A <: Hashing[_]: ClassTag](implicit tag: ClassTag[A], alg: A) = {
+      //val alg = implicitly[A]
+      println(tag.runtimeClass.getName)
+      println(alg.getClass.getName)
+      //val ref = implicitly[ClassTag[A]].runtimeClass.newInstance().asInstanceOf[A]
+      alg
+    }
   }
 
+  /*
   sealed trait HashingRouter[F[_] <: Hashing[_], N] {
     def apply(nodes: util.Collection[N]): F[N]
   }
