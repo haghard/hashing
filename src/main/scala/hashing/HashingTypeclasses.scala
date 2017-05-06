@@ -115,10 +115,9 @@ object HashingTypeclasses {
     }
   }
 
-  sealed trait HashingRouter[A <: Hashing[N], N] {}
-
   object HashingRouter {
-    def apply[A <: Hashing[_]: ClassTag](implicit tag: ClassTag[A], alg: A) = {
+    //Phantom type
+    def apply[A <: Hashing[_]: ClassTag](implicit tag: ClassTag[A], alg: A): Hashing[T] forSome { type T } = {
       //val alg = implicitly[A]
       println(tag.runtimeClass.getName)
       println(alg.getClass.getName)
@@ -126,6 +125,9 @@ object HashingTypeclasses {
       alg
     }
   }
+
+  //HashingRouter[Consistent[String]]
+  //HashingRouter[Rendezvous[String]]
 
   /*
   sealed trait HashingRouter[F[_] <: Hashing[_], N] {
