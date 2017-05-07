@@ -104,7 +104,7 @@ object Pipeline2 {
 
     implicit val src = Source[Option, Int] { (line: String) ⇒ Option(line.length) }
     implicit val map = Transformation { (v: Int) ⇒ v * -1 }
-    implicit val sink = Sink[Int] { (v: Int) ⇒ println(s"out > $v") }
+    implicit val consoleSink = Sink[Int] { (v: Int) ⇒ println(s"out > $v") }
   }
 
   import implicits._
