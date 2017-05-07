@@ -42,10 +42,11 @@ import hashing.Hashing.{ ConsistentHashing, HashingRouter, RendezvousHashing }
 //https://github.com/openzipkin/zipkin-finagle-example
 
 //sbt runMain hashing.CompareHashing
+
 object CompareHashing {
   val keysNum = 500000
 
-  val sender = OkHttpSender.create("http://95.213.204.90:9411/api/v1/spans")
+  val sender = OkHttpSender.create("http://...:9411/api/v1/spans")
   val reporter = AsyncReporter.builder(sender).build()
   val tracing = Tracing.newBuilder().localServiceName("hashing")
     .reporter(reporter)
@@ -102,34 +103,39 @@ object CompareHashing {
     val start = System.currentTimeMillis
     println("======: ConsistentHash :========")
 
-    val rootSpan = tracer.newTrace().name("hash").start()
+    def run = {
+      val rootSpan = tracer.newTrace().name("hash").start()
 
-    val distribution0: Map[String, AtomicInteger] = new util.HashMap[String, AtomicInteger]()
-    val span0 = tracer.newChild(rootSpan.context).name("consistent").start()
-    val ctx = span0.context()
-    println(s"TraceId: ${ctx.traceIdString}  SpanId:${ctx.spanId}")
-    iter(HashingRouter[String, ConsistentHashing](getNodes(distribution0)), distribution0)
-    span0.finish()
+      val distribution0: Map[String, AtomicInteger] = new util.HashMap[String, AtomicInteger]()
+      val span0 = tracer.newChild(rootSpan.context).name("consistent").start()
+      val ctx = span0.context()
+      println(s"TraceId: ${ctx.traceIdString}  SpanId:${ctx.spanId}")
+      iter(HashingRouter[String, ConsistentHashing](getNodes(distribution0)), distribution0)
+      span0.finish()
 
-    println("======: RendezvousHashing :========")
-    val distribution1: Map[String, AtomicInteger] = new util.HashMap[String, AtomicInteger]()
-    val span1 = tracer.newChild(rootSpan.context).name("rendezvous").start()
-    val ctx1 = span1.context()
-    println(s"TraceId: ${ctx1.traceIdString}  SpanId:${ctx1.spanId}")
-    iter(HashingRouter[String, RendezvousHashing](getNodes(distribution1)), distribution1)
-    span1.finish()
-    rootSpan.finish()
+      println("======: RendezvousHashing :========")
+      val distribution1: Map[String, AtomicInteger] = new util.HashMap[String, AtomicInteger]()
+      val span1 = tracer.newChild(rootSpan.context).name("rendezvous").start()
+      val ctx1 = span1.context()
+      println(s"TraceId: ${ctx1.traceIdString}  SpanId:${ctx1.spanId}")
+      iter(HashingRouter[String, RendezvousHashing](getNodes(distribution1)), distribution1)
+      span1.finish()
+      rootSpan.finish()
 
-    val latency = System.currentTimeMillis - start
-    println("==============")
-    println("Latency: " + latency)
+      val latency = System.currentTimeMillis - start
+      println("==============")
+      println("Latency: " + latency)
+    }
+
+    (0 until 5).foreach(_ ⇒ run)
 
     tracing.close
     reporter.close
     sender.close
+  }
+}
 
-    /*
-
+/*
     val vnodes = 5
     val replicas = Cache("alpha") :: Cache("beta") :: Cache("gamma") :: Cache("delta") ::
       Cache("epsilon") :: Cache("zeta") :: Cache("eta") ::
@@ -139,7 +145,4 @@ object CompareHashing {
 
     ch.get(Some("key-a"))
     ch.get(Some("key-a"))
-*/
-
-  }
-}
+*/ 

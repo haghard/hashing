@@ -116,6 +116,7 @@ object HashingReflection {
      *
      *  val nodes = java.util.Arrays.asList(1, 2)
      *  nodes.router[Rendezvous]  - compilation error
+     *  error: type arguments [hashing.Taggles.Rendezvous] do not conform to method router's type parameter bounds [A <: Hashing[Int]]
      *
      */
     def router[A <: Hashing[T]: ClassTag] = {

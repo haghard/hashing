@@ -3,7 +3,6 @@ package hashing
 import java.util
 import java.util.Map
 import java.util.concurrent.atomic.AtomicInteger
-
 import hashing.HashingTypeclasses.{ Consistent, Hashing, Rendezvous }
 
 //runMain hashing.CompareHashingTC
