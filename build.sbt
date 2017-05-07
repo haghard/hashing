@@ -17,6 +17,7 @@ addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.fu
 updateOptions := updateOptions.value.withCachedResolution(true)
 
 resolvers += "Akka Snapshot Repository" at "http://repo.akka.io/snapshots/"
+resolvers += Resolver.bintrayRepo("stanch", "maven")
 
 SbtScalariform.scalariformSettings
 

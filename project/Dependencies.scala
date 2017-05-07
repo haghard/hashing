@@ -21,9 +21,10 @@ object Dependencies {
 
     val trace = Seq("org.apache.htrace" % "htrace-core4" % "4.3.0-SNAPSHOT", "org.apache.htrace" % "htrace-zipkin" % "4.3.0-SNAPSHOT")
 
+    //val sourceCode = "com.lihaoyi" %% "sourcecode" % "0.1.3"
+    val reftree = "org.stanch" %% "reftree" % "1.0.0"
 
-
-    val all = Seq(akkaActor, hasher, brave, zipkinSender, opentracing, simulacrum, cats, shapeless, akkaTyped)
+    val all = Seq(akkaActor, hasher, brave, zipkinSender, opentracing, simulacrum, cats, shapeless, akkaTyped, reftree)
   }
 
   object Test {

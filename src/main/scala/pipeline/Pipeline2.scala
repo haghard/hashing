@@ -109,22 +109,22 @@ object Pipeline2 {
 
   import implicits._
 
-  def stage1: Flow.Aux[One, Int, Int, Either[Unit, Option[Unit]]] = {
+  def blockA: Flow.Aux[One, Int, Int, Either[Unit, Option[Unit]]] = {
     import allImplicits._
     Flow[One, Option, Int, Int]
   }
 
-  def stage2: Flow.Aux[Two, Int, Int, Either[Unit, Option[Unit]]] = {
+  def blockB: Flow.Aux[Two, Int, Int, Either[Unit, Option[Unit]]] = {
     import allImplicits._
     Flow[Two, Option, Int, Int]
   }
 
-  def stage3: Flow.Aux[Three, Int, Int, Either[Unit, Option[Unit]]] = {
+  def blockC: Flow.Aux[Three, Int, Int, Either[Unit, Option[Unit]]] = {
     import allImplicits._
     Flow[Three, Option, Int, Int]
   }
 
-  val chain = stage1 +: stage2 +: stage3 +: PNil
+  val chain = blockA +: blockB +: blockC +: PNil
 
   val failure = chain("aaa")
   println("*******************")
