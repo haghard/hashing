@@ -46,7 +46,7 @@ object RefTreeExamples {
     //val tb3 = Tenant("tenant.1", Vector(Project("tenant.1.project.1"), Project("tenant.1.project.2"), Project("tenant.1.project.3")))
     val tb3 = Tenant("tenant.1", Project("tenant.1.project.1") :: Project("tenant.1.project.2") :: Project("tenant.1.project.3") :: Nil)
 
-    import reftree.contrib.SimplifiedInstances.{  list, seq }
+    import reftree.contrib.SimplifiedInstances.{ list, seq }
     import reftree.contrib.OpticInstances._
 
     val renderer = Renderer(renderingOptions = RenderingOptions(density = 20), directory = Paths.get("images"))
@@ -61,7 +61,7 @@ object RefTreeExamples {
 
     import reftree.contrib.SimplifiedInstances.{ list, seq }
     val shards = Shard("a", ShardEntity("aa") :: ShardEntity("ab") :: ShardEntity("ac") :: Nil) ::
-        Shard("b", ShardEntity("ba") :: ShardEntity("bb") :: ShardEntity("bc") :: Nil) :: Nil
+      Shard("b", ShardEntity("ba") :: ShardEntity("bb") :: ShardEntity("bc") :: Nil) :: Nil
 
     val renderer = Renderer(renderingOptions = RenderingOptions(density = 100), directory = Paths.get("images"))
     import renderer._

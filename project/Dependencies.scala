@@ -5,7 +5,9 @@ object Dependencies {
 
   object Compile {
     val hasher = "com.roundeights" %% "hasher" % "1.2.0"
+
     val akkaActor = "com.typesafe.akka" %% "akka-actor" % akkaVersion
+    val akkaStream = "com.typesafe.akka" %% "akka-stream" % akkaVersion
 
     val opentracing = "io.opentracing" % "opentracing-api" % "0.21.0"
     val zipkinSender = "io.zipkin.reporter" % "zipkin-sender-okhttp3" % "0.7.0"
@@ -24,7 +26,9 @@ object Dependencies {
     //val sourceCode = "com.lihaoyi" %% "sourcecode" % "0.1.3"
     val reftree = "org.stanch" %% "reftree" % "1.0.0"
 
-    val all = Seq(akkaActor, hasher, brave, zipkinSender, opentracing, simulacrum, cats, shapeless, akkaTyped, reftree)
+
+    val all = Seq(akkaActor, hasher, brave, zipkinSender, opentracing, simulacrum, cats, shapeless,
+      reftree, akkaStream, akkaTyped)
   }
 
   object Test {
