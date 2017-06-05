@@ -1,7 +1,7 @@
 import sbt._
 
 object Dependencies {
-  val akkaVersion = "2.5.1"
+  val akkaVersion = "2.5.2"
 
   object Compile {
     val hasher = "com.roundeights" %% "hasher" % "1.2.0"
