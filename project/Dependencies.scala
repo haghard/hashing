@@ -19,16 +19,14 @@ object Dependencies {
 
     val cats = "org.typelevel" %% "cats" % "0.9.0"
 
-    val akkaTyped = "com.typesafe.akka" %% "akka-typed" % "2.5.99-TYPED-M1"
-
-    val trace = Seq("org.apache.htrace" % "htrace-core4" % "4.3.0-SNAPSHOT", "org.apache.htrace" % "htrace-zipkin" % "4.3.0-SNAPSHOT")
+    //val trace = Seq("org.apache.htrace" % "htrace-core4" % "4.3.0-SNAPSHOT", "org.apache.htrace" % "htrace-zipkin" % "4.3.0-SNAPSHOT")
 
     //val sourceCode = "com.lihaoyi" %% "sourcecode" % "0.1.3"
     val reftree = "org.stanch" %% "reftree" % "1.0.0"
 
 
     val all = Seq(akkaActor, hasher, brave, zipkinSender, opentracing, simulacrum, cats, shapeless,
-      reftree, akkaStream, akkaTyped)
+      reftree, akkaStream)
   }
 
   object Test {
