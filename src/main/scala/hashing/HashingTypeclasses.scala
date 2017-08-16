@@ -4,13 +4,40 @@ import java.nio.ByteBuffer
 import java.util
 import java.util.concurrent.ConcurrentSkipListSet
 
+import com.twitter.algebird.{ CassandraMurmurHash, MurmurHash128 }
+
 import scala.collection.immutable.SortedSet
 import scala.reflect.ClassTag
 
 object HashingTypeclasses {
 
+  /*
+  import com.twitter.algebird.MinHasher32
+  val targetThreshold = 0.5
+  val maxBytes = 64
+  val (hashseNum, bucketsNum) = MinHasher.pickHashesAndBands(targetThreshold, maxBytes / 4)
+  implicit val mh = new MinHasher32(targetThreshold, maxBytes)
+
+  mh.numHashes
+  mh.numBands
+
+  val name = Set('q', 'w', 'e', 'r', 't', 'y')
+  val name1 = Set('q', 'w', 'e', 'r', 't', 'y', 'a')
+  List(name, name1).map { item ⇒
+    (item.mkString, item.map(i ⇒ mh.init(i.toLong)).reduce(mh.plus(_, _)))
+  }.flatMap {
+    case (itemId, sig) ⇒
+      mh.buckets(sig).zipWithIndex.map {
+        case (bucket, bucketIndex) ⇒
+          ((bucket, bucketIndex), Set((itemId, sig)))
+      }
+  }.groupBy(_._1).mapValues(_.map(_._2))
+  */
+
   @simulacrum.typeclass trait Hashing[Node] {
+    def seed: Long
     def name: String
+
     def withNodes(nodes: util.Collection[Node]): Hashing[Node] = {
       val iter = nodes.iterator
       while (iter.hasNext) {
@@ -25,81 +52,185 @@ object HashingTypeclasses {
 
     def addNode(node: Node): Boolean
 
-    def get(key: String, rf: Int): Set[Node]
+    def nodeFor(key: String, rf: Int): Set[Node]
 
     def validated(node: Node): Boolean
   }
 
+  /**
+   * Highest Random Weight (HRW) hashing https://github.com/clohfink/RendezvousHash
+   * A random uniform way to partition your keyspace up among the available nodes
+   */
   @simulacrum.typeclass trait Rendezvous[Node] extends Hashing[Node] {
-    override val name = "rendezvous-hash"
-    protected val hash = scala.util.hashing.MurmurHash3
-    protected val members: ConcurrentSkipListSet[Node] = new ConcurrentSkipListSet[Node]()
+    override val seed = 512l
+    override val name = "rendezvous-hashing"
+    protected val members = new ConcurrentSkipListSet[Node]()
 
-    case class Item(hash: Int, node: Node)
-
-    override def removeNode(node: Node): Boolean = {
-      println(s"remove $node")
+    override def removeNode(node: Node): Boolean =
       members.remove(node)
-    }
 
-    override def addNode(node: Node): Boolean = {
-      if (validated(node)) {
-        members.add(node)
-      } else false
-    }
+    override def addNode(node: Node): Boolean =
+      if (validated(node)) members.add(node) else false
 
-    override def get(key: String, rf: Int): Set[Node] = {
-      var allHashes = SortedSet.empty[Item](new Ordering[Item]() {
-        override def compare(x: Item, y: Item): Int =
-          -x.hash.compare(y.hash)
-      })
+    override def nodeFor(key: String, rf: Int): Set[Node] = {
+      var candidates = SortedSet.empty[(Long, Node)]((x: (Long, Node), y: (Long, Node)) ⇒ -x._1.compare(y._1))
       val iter = members.iterator
       while (iter.hasNext) {
         val node = iter.next
         val keyBytes = key.getBytes
         val nodeBytes = toBinary(node)
-        val bytes = ByteBuffer.allocate(keyBytes.length + nodeBytes.length).put(keyBytes).put(nodeBytes).array()
-        val hash0 = hash.arrayHash(bytes)
-        allHashes = allHashes + Item(hash0, node)
+        val bytes = ByteBuffer.allocate(keyBytes.length + nodeBytes.length).put(keyBytes).put(nodeBytes).array
+        val nodeHash128bit = CassandraMurmurHash.hash3_x64_128(ByteBuffer.wrap(bytes), 0, bytes.length, seed)(1)
+        //val nodeKeyHash = hash.arrayHash(bytes)
+        candidates = candidates + (nodeHash128bit → node)
       }
-      allHashes.take(rf).map(_.node)
+      candidates.take(rf).map(_._2)
     }
   }
 
-  @simulacrum.typeclass trait Consistent[Node] extends Hashing[Node] {
-    import java.util.{ SortedMap ⇒ JSortedMap, TreeMap ⇒ JTreeMap }
+  /*
+    https://community.oracle.com/blogs/tomwhite/2007/11/27/consistent-hashing
+    https://www.datastax.com/dev/blog/token-allocation-algorithm
+    http://docs.basho.com/riak/kv/2.2.3/learn/concepts/vnodes/
 
-    override val name = "consistent-hash"
-    protected val hash = scala.util.hashing.MurmurHash3
-    protected val ring: JSortedMap[Int, Node] = new JTreeMap[Int, Node]()
+    We want to have an even split of the token range so that load can be well distributed between nodes,
+      as well as the ability to add new nodes and have them take a fair share of the load without the necessity
+      to move data between the existing nodes
+  */
+  @simulacrum.typeclass trait Consistent[Node] extends Hashing[Node] {
+    import scala.collection.JavaConverters._
+    import java.util.{ SortedMap ⇒ JSortedMap, TreeMap ⇒ JTreeMap }
+    private val numberOfVNodes = 4
+    override val seed = 512l
+    override val name = "consistent-hashing"
+
+    private val ring: JSortedMap[Long, Node] = new JTreeMap[Long, Node]()
+
+    private def writeInt(arr: Array[Byte], i: Int, offset: Int): Array[Byte] = {
+      arr(offset) = (i >>> 24).toByte
+      arr(offset + 1) = (i >>> 16).toByte
+      arr(offset + 2) = (i >>> 8).toByte
+      arr(offset + 3) = i.toByte
+      arr
+    }
+
+    private def readInt(arr: Array[Byte], offset: Int): Int = {
+      (arr(offset) << 24) |
+        (arr(offset + 1) & 0xff) << 16 |
+        (arr(offset + 2) & 0xff) << 8 |
+        (arr(offset + 3) & 0xff)
+    }
 
     override def removeNode(node: Node): Boolean = {
-      val bytes = toBinary(node)
-      //val hash =  new BigInteger(1, bytes.md5.bytes).intValue()
-      val hash0 = hash.arrayHash(bytes)
-      println(s"remove $node - $hash0")
-      node == ring.remove(hash0)
+      //println(s"remove $node")
+      (0 to numberOfVNodes).foldLeft(true) { (acc, vNodeId) ⇒
+        val vNodeSuffix = Array.ofDim[Byte](4)
+        writeInt(vNodeSuffix, vNodeId, 0)
+        val bytes = toBinary(node) ++ vNodeSuffix
+        //128-bit hash value
+        val nodeHash128bit = CassandraMurmurHash.hash3_x64_128(ByteBuffer.wrap(bytes), 0, bytes.length, seed)(1)
+        //println(s"$node - vnode:$vNodeId")
+        acc & node == ring.remove(nodeHash128bit)
+      }
     }
 
     override def addNode(node: Node): Boolean = {
+      //Hash each node to several numberOfVNodes
       if (validated(node)) {
-        val bytes = toBinary(node)
-        val hash0 = hash.arrayHash(bytes)
-        ring.put(hash0, node)
-        true
+        (0 to numberOfVNodes).foldLeft(true) { (acc, i) ⇒
+          val suffix = Array.ofDim[Byte](4)
+          writeInt(suffix, i, 0)
+          val bytes = toBinary(node) ++ suffix
+          //val nodeHash = hashAlg.arrayHash(bytes)
+          val nodeHash128bit = CassandraMurmurHash.hash3_x64_128(ByteBuffer.wrap(bytes), 0, bytes.length, seed)(1)
+          acc & (node == ring.put(nodeHash128bit, node))
+        }
       } else false
     }
 
-    override def get(key: String, rf: Int): Set[Node] = {
+    override def nodeFor(key: String, rf: Int): Set[Node] = {
+      if (rf > ring.keySet.size)
+        throw new Exception("Replication factor more than the number of the ranges on a ring")
+
       val bytes = key.getBytes
-      var hash0 = hash.arrayHash(bytes)
-      if (!ring.containsKey(hash0)) {
-        val tailMap = ring.tailMap(hash0)
-        hash0 = if (tailMap.isEmpty) ring.firstKey else tailMap.firstKey
+      val keyHash128bit = CassandraMurmurHash.hash3_x64_128(ByteBuffer.wrap(bytes), 0, bytes.length, seed)(1)
+      if (ring.containsKey(keyHash128bit)) {
+        ring.keySet.asScala.take(rf).map(ring.get).to[scala.collection.immutable.Set]
+      } else {
+        val tailMap = ring.tailMap(keyHash128bit)
+        if (tailMap.isEmpty) { //out of range
+          ring.keySet.asScala.take(rf).map(ring.get).to[scala.collection.immutable.Set]
+        } else {
+          //moving clockwise in the ring until the next key is greater than or equal to fromKey
+          val candidates = tailMap.keySet.asScala.take(rf).map(ring.get).to[scala.collection.immutable.Set]
+          if (candidates.size < rf) {
+            //we must be at the end of the ring so we go to the first entry and so on
+            candidates ++ ring.keySet.asScala.take(rf - candidates.size).map(ring.get).to[scala.collection.immutable.Set]
+          } else candidates
+        }
       }
-      Set(ring.get(hash0))
+    }
+
+    override def toString: String = {
+      val iter = ring.keySet.iterator
+      val sb = new StringBuilder
+      while (iter.hasNext) {
+        val key = iter.next
+        sb.append(s"[${key}: ${ring.get(key)}]").append("->")
+      }
+      sb.toString
     }
   }
+
+  //MinHashing alg for approximate similarity
+  /*
+  @simulacrum.typeclass trait MinHashing[Node] extends Hashing[Node] {
+    import com.twitter.algebird.{ MinHashSignature, MinHasher32 }
+    override val seed = 512l
+
+    //hashesNum: Int = 14
+    //bucketsNum: Int = 7
+    //val (hashesNum, bucketsNum) = MinHasher.pickHashesAndBands(targetThreshold, maxBytes / 4)
+    val maxBytes = 64
+    val targetThreshold = 0.5
+    val mh = new MinHasher32(targetThreshold, maxBytes)
+
+    case class Item(n: Node, s: MinHashSignature) extends java.lang.Comparable[Item] {
+      override def compareTo(that: Item): Int = n.toString.compareTo(that.n.toString)
+    }
+
+    private val members = new ConcurrentSkipListSet[Item]()
+
+    override val name = "min-hashing"
+
+    override def removeNode(node: Node): Boolean =
+      members.remove(node)
+
+    override def addNode(node: Node): Boolean = {
+      if (validated(node)) members.add(Item(node, mh.init(node.toString)))
+      else false
+    }
+
+    override def nodeFor(key: String, rf: Int): Set[Node] = {
+      var distances = SortedSet.empty[(Double, Node)]((x: (Double, Node), y: (Double, Node)) ⇒ x._1.compare(y._1))
+      val iter = members.iterator
+      val keySignature = key.map(ch ⇒ mh.init(ch.toString)).reduce(mh.plus(_, _))
+
+      var d: Double = 0
+      while (iter.hasNext) {
+        val nodeSignature = iter.next
+        val dist = mh.similarity(nodeSignature.s, keySignature)
+        if (dist > d)
+          d = dist
+
+        //cup a ring evenly
+        if (dist == 0)
+          println(s"Key: $key, dist: $dist, node -> ${nodeSignature.n}")
+        distances = distances + (dist → nodeSignature.n)
+      }
+      distances.take(rf).map(_._2)
+    }
+  }*/
 
   object Consistent {
     implicit def instance = new Consistent[String] {
@@ -114,6 +245,13 @@ object HashingTypeclasses {
       override def validated(node: String): Boolean = true
     }
   }
+
+  /*object MinHashing {
+    implicit def instance = new MinHashing[String] {
+      override def toBinary(node: String): Array[Byte] = node.getBytes("utf-8")
+      override def validated(node: String): Boolean = true
+    }
+  }*/
 
   object HashingRouter {
     //Phantom type

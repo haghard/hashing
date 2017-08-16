@@ -1,12 +1,11 @@
 import sbt._
 
 object Dependencies {
-  val akkaVersion = "2.5.2"
+  val akkaVersion = "2.5.4"
 
   object Compile {
-    val hasher = "com.roundeights" %% "hasher" % "1.2.0"
+    //val hasher = "com.roundeights" %% "hasher" % "1.2.0"
 
-    val akkaActor = "com.typesafe.akka" %% "akka-actor" % akkaVersion
     val akkaStream = "com.typesafe.akka" %% "akka-stream" % akkaVersion
 
     val opentracing = "io.opentracing" % "opentracing-api" % "0.21.0"
@@ -24,9 +23,12 @@ object Dependencies {
     //val sourceCode = "com.lihaoyi" %% "sourcecode" % "0.1.3"
     val reftree = "org.stanch" %% "reftree" % "1.0.0"
 
+    val algebird = "com.twitter" %% "algebird-core" % "0.13.0"
 
-    val all = Seq(akkaActor, hasher, brave, zipkinSender, opentracing, simulacrum, cats, shapeless,
-      reftree, akkaStream)
+    val ammonite = "com.lihaoyi" % "ammonite" % "1.0.1" % "test" cross CrossVersion.full
+
+    val all = Seq(brave, zipkinSender, opentracing, simulacrum, cats, shapeless,
+      reftree, akkaStream, algebird, ammonite /*, hasher*/ )
   }
 
   object Test {

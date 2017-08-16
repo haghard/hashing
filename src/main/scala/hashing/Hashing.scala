@@ -33,7 +33,7 @@ object Hashing {
 
     def get(key: String, rf: Int): Set[Node]
 
-    def validated(node: Node): Boolean
+    def validate(node: Node): Boolean
   }
 
   //Highest Random Weight (HRW) hashing
@@ -49,7 +49,7 @@ object Hashing {
     }
 
     override def addNode(node: Node): Boolean = {
-      if (validated(node)) {
+      if (validate(node)) {
         //println(s"add $node")
         members.add(node)
       } else false
@@ -86,12 +86,11 @@ object Hashing {
       val bytes = toBinary(node)
       //val hash =  new BigInteger(1, bytes.md5.bytes).intValue()
       val hash0 = hash.arrayHash(bytes)
-      println(s"remove $node - $hash0")
       node == ring.remove(hash0)
     }
 
     override def addNode(node: Node): Boolean = {
-      if (validated(node)) {
+      if (validate(node)) {
         val bytes = toBinary(node)
         //val hash =  new BigInteger(1, bytes.md5.bytes).intValue()
         val hash0 = hash.arrayHash(bytes)
@@ -113,11 +112,10 @@ object Hashing {
   }
 
   object HashingAlg {
-
     implicit val chString = new ConsistentHash[String, ConsistentHashing] {
       override def toBinary(node: String): Array[Byte] = node.getBytes
 
-      override def validated(node: String): Boolean = {
+      override def validate(node: String): Boolean = {
         //TODO: Pattern for IpAddress
         true
       }
@@ -126,7 +124,7 @@ object Hashing {
     implicit val rendezvousString = new Rendezvous[String, RendezvousHashing] {
       override def toBinary(node: String): Array[Byte] = node.getBytes
 
-      override def validated(node: String): Boolean = {
+      override def validate(node: String): Boolean = {
         //TODO: Pattern for IpAddress
         true
       }

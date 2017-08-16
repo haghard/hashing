@@ -174,8 +174,7 @@ class Runner {
         Cache("eta"),
         Cache("theta"),
         Cache("iota"),
-        Cache("kappa")
-      ))
+        Cache("kappa")))
     val rand = new Random(System.currentTimeMillis())
     val objects: IndexedSeq[CachableThingy] = for { i ← 0 until numobjects } yield {
       CachableThingy(rand.nextInt(10000))

@@ -43,6 +43,7 @@ import hashing.Hashing.{ ConsistentHashing, HashingRouter, RendezvousHashing }
 
 //sbt runMain hashing.CompareHashing
 
+//Depricated. please use CompareHashingTC
 object CompareHashing {
   val keysNum = 500000
 
@@ -116,7 +117,7 @@ object CompareHashing {
       println("======: RendezvousHashing :========")
       val distribution1: Map[String, AtomicInteger] = new util.HashMap[String, AtomicInteger]()
       val span1 = tracer.newChild(rootSpan.context).name("rendezvous").start()
-      val ctx1 = span1.context()
+      val ctx1 = span1.context
       println(s"TraceId: ${ctx1.traceIdString}  SpanId:${ctx1.spanId}")
       iter(HashingRouter[String, RendezvousHashing](getNodes(distribution1)), distribution1)
       span1.finish()

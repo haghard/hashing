@@ -86,10 +86,8 @@ object Pipelines {
         Pipeline[Two, Option, Int, Int].feed(_)
           .fold(
             Pipeline[Three, Option, Int, Int].feed(_).fold(Left(_), Right(_)),
-            Right(_)
-          ),
-        Right(_)
-      )
+            Right(_)),
+        Right(_))
 
   /*
   def second(in: String) =

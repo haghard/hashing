@@ -25,11 +25,8 @@ object AkkaStreamsPipeline {
   import shapeless.PolyDefns.~>
 
   object toFlow extends (ParserStageDef ~> ProcessingFlow) {
-    override def apply[T](f: ParserStageDef[T]) = {
-      //val A: cats.Applicative[Option[T]] = implicitly[cats.Applicative[Option[T]]]
-      //val F: cats.Functor[Option[T]] = implicitly[cats.Functor[Option[T]]]
+    override def apply[T](f: ParserStageDef[T]) =
       Flow[Data].map((f.parser andThen f.processor))
-    }
   }
 
   trait ParserStageDef[T] {
