@@ -4,12 +4,11 @@ import java.nio.ByteBuffer
 import java.util
 import java.util.concurrent.ConcurrentSkipListSet
 
-import com.twitter.algebird.{ CassandraMurmurHash, MurmurHash128 }
-
+import com.twitter.algebird.CassandraMurmurHash
 import scala.collection.immutable.SortedSet
 import scala.reflect.ClassTag
 
-object HashingTypeclasses {
+object Hashing2 {
 
   /*
   import com.twitter.algebird.MinHasher32
@@ -81,7 +80,6 @@ object HashingTypeclasses {
         val nodeBytes = toBinary(node)
         val bytes = ByteBuffer.allocate(keyBytes.length + nodeBytes.length).put(keyBytes).put(nodeBytes).array
         val nodeHash128bit = CassandraMurmurHash.hash3_x64_128(ByteBuffer.wrap(bytes), 0, bytes.length, seed)(1)
-        //val nodeKeyHash = hash.arrayHash(bytes)
         candidates = candidates + (nodeHash128bit → node)
       }
       candidates.take(rf).map(_._2)
@@ -127,7 +125,6 @@ object HashingTypeclasses {
         val vNodeSuffix = Array.ofDim[Byte](4)
         writeInt(vNodeSuffix, vNodeId, 0)
         val bytes = toBinary(node) ++ vNodeSuffix
-        //128-bit hash value
         val nodeHash128bit = CassandraMurmurHash.hash3_x64_128(ByteBuffer.wrap(bytes), 0, bytes.length, seed)(1)
         //println(s"$node - vnode:$vNodeId")
         acc & node == ring.remove(nodeHash128bit)
@@ -141,7 +138,6 @@ object HashingTypeclasses {
           val suffix = Array.ofDim[Byte](4)
           writeInt(suffix, i, 0)
           val bytes = toBinary(node) ++ suffix
-          //val nodeHash = hashAlg.arrayHash(bytes)
           val nodeHash128bit = CassandraMurmurHash.hash3_x64_128(ByteBuffer.wrap(bytes), 0, bytes.length, seed)(1)
           acc & (node == ring.put(nodeHash128bit, node))
         }

@@ -4,7 +4,7 @@ import java.util
 import java.util.Map
 import java.util.concurrent.atomic.AtomicInteger
 
-import hashing.HashingTypeclasses.{ Consistent, Hashing, Rendezvous }
+import hashing.Hashing2.{ Consistent, Hashing, Rendezvous }
 
 //runMain hashing.CompareHashingTC
 object CompareHashingTC {
