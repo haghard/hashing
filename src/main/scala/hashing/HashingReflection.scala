@@ -52,10 +52,7 @@ object HashingReflection {
     }
 
     override def get(key: String, rf: Int): Set[String] = {
-      var allHashes = SortedSet.empty[Item](new Ordering[Item]() {
-        override def compare(x: Item, y: Item): Int =
-          -x.hash.compare(y.hash)
-      })
+      var allHashes = SortedSet.empty[Item]((x: Item, y: Item) => -x.hash.compare(y.hash))
       val iter = members.iterator
       while (iter.hasNext) {
         val node = iter.next
@@ -116,7 +113,7 @@ object HashingReflection {
      *
      *  val nodes = java.util.Arrays.asList(1, 2)
      *  nodes.router[Rendezvous]  - compilation error
-     *  error: type arguments [hashing.Taggles.Rendezvous] do not conform to method router's type parameter bounds [A <: Hashing[Int]]
+     *  error: type arguments [hashing.Rendezvous] do not conform to method router's type parameter bounds [A <: Hashing[Int]]
      *
      */
     def router[A <: Hashing[T]: ClassTag] = {
