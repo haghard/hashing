@@ -73,8 +73,9 @@ object Pipeline2 {
     type Default[T, F[_], A, B] = Aux[T, A, B, Out[F]]
     type Aux[T, A, B, O] = Flow[T, A, B] { type Out = O }
 
-    final def apply[T: Algorithm, F[_]: Functor, A, B](implicit read: Source[F, A], computation: Transformation[A, B],
-                                                       write: Sink[B]): Default[T, F, A, B] = {
+    final def apply[T: Algorithm, F[_]: Functor, A, B](implicit
+      read: Source[F, A],
+                                                       T: Transformation[A, B], write: Sink[B]): Default[T, F, A, B] = {
       val G: Algorithm[T] = implicitly
       val F: Functor[F] = implicitly
       new Flow[T, A, B] {
@@ -84,7 +85,7 @@ object Pipeline2 {
           println(s"$input matches(${G.name}) = $b")
           if (b) Right {
             val in = read(input)
-            val computed = F.map(in)(computation)
+            val computed = F.map(in)(T)
             F.map(computed)(write)
           }
           else Left(())

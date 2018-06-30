@@ -52,7 +52,7 @@ object HashingReflection {
     }
 
     override def get(key: String, rf: Int): Set[String] = {
-      var allHashes = SortedSet.empty[Item]((x: Item, y: Item) => -x.hash.compare(y.hash))
+      var allHashes = SortedSet.empty[Item]((x: Item, y: Item) ⇒ -x.hash.compare(y.hash))
       val iter = members.iterator
       while (iter.hasNext) {
         val node = iter.next

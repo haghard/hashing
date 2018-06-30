@@ -4,7 +4,7 @@ import scalariform.formatter.preferences._
 name := "hashing"
 version := "0.0.1"
 
-scalaVersion := "2.12.3"
+scalaVersion := "2.12.4"
 
 libraryDependencies ++= Dependencies.Compile.all
 libraryDependencies ++= Dependencies.Test.all

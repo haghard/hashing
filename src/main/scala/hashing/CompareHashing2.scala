@@ -6,31 +6,31 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import hashing.Hashing2.{ Consistent, Hashing, Rendezvous }
 
-//runMain hashing.CompareHashingTC
-object CompareHashingTC {
+//runMain hashing.CompareHashing2
+object CompareHashing2 {
 
   val keysNum = 500000
 
-  val nodes0 = "alpha" :: "beta" :: "gamma" :: "delta" :: "epsilon" :: "zeta" :: "eta" :: "theta" :: "iota" :: "kappa" :: Nil
+  val nodes0 = "alpha" :: "beta" :: "gamma" :: "delta" :: Nil
+  val nodes = "alpha" :: "beta" :: "gamma" :: "delta" :: "epsilon" :: "zeta" :: "eta" :: "theta" :: "iota" :: "kappa" :: Nil
+
+  val rnd = java.util.concurrent.ThreadLocalRandom.current
 
   def getNodes(distribution: util.Map[String, AtomicInteger]) = {
-    val nodes = new java.util.ArrayList[String]
-    (0 until nodes0.size).foreach { i ⇒
-      val node = nodes0(i)
-      nodes.add(node)
+    val localNodes = new java.util.ArrayList[String]
+    (0 until nodes.size).foreach { i ⇒
+      val node = nodes(i)
+      localNodes.add(node)
       distribution.put(node, new AtomicInteger)
     }
-    nodes
+    localNodes
   }
-
-  lazy val rnd = java.util.concurrent.ThreadLocalRandom.current
 
   def line(limit: Int): String = {
     def go(sb: StringBuilder, i: Int, limit: Int): String = {
       if (i < limit) go(sb.append(rnd.nextInt('a'.toInt, 'z'.toInt).toChar), i + 1, limit)
       else sb.toString
     }
-
     go(new StringBuilder, 0, limit)
   }
 
@@ -49,8 +49,8 @@ object CompareHashingTC {
     }
 
     println("====== remove ========")
-    (0 until 4).foreach { i ⇒
-      val node = nodes0(i)
+    (0 until nodes.size / 2).foreach { i ⇒
+      val node = nodes(i)
       router.removeNode(node)
       distribution.remove(node)
     }
@@ -71,6 +71,8 @@ object CompareHashingTC {
 
   def main(args: Array[String]): Unit = {
     val start = System.currentTimeMillis
+
+    //HashingRouter[Rendezvous[String]]
 
     println("======: ConsistentHash :========")
     val consistentHist: Map[String, AtomicInteger] = new util.HashMap[String, AtomicInteger]()

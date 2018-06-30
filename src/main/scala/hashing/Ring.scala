@@ -4,13 +4,16 @@ object Ring {
   type PartitionId = Int
   case class NodeId(id: Int)
 
-  def apply(nodesSize: Int, partitionsSize: Int): Ring = {
-    val partitions2Nodes =
-      (0 until nodesSize).flatMap { id =>
-        (id until partitionsSize by nodesSize).map((_, NodeId(id)))
-      }
-    new Ring(partitions2Nodes.toMap)
-  }
+  /**
+   * Recommended by Riak nodesSize = 5, partitionsSize = 64
+   * @param nodesSize - nr of initial cluster size of nodes
+   * @param partitionsSize - nr of partitions Ring consists of
+   * @return representation of Ring
+   */
+  def apply(nodesSize: Int, partitionsSize: Int): Ring =
+    new Ring((0 until nodesSize).flatMap { id ⇒
+      (id until partitionsSize by nodesSize).map((_, NodeId(id)))
+    }.toMap)
 }
 
 class Ring(private val ring: Map[Ring.PartitionId, Ring.NodeId]) {

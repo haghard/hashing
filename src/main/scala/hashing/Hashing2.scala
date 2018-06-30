@@ -1,37 +1,16 @@
 package hashing
 
 import java.nio.ByteBuffer
+import java.nio.charset.Charset
 import java.util
 import java.util.concurrent.ConcurrentSkipListSet
 
 import com.twitter.algebird.CassandraMurmurHash
+
 import scala.collection.immutable.SortedSet
 import scala.reflect.ClassTag
 
 object Hashing2 {
-
-  /*
-  import com.twitter.algebird.MinHasher32
-  val targetThreshold = 0.5
-  val maxBytes = 64
-  val (hashseNum, bucketsNum) = MinHasher.pickHashesAndBands(targetThreshold, maxBytes / 4)
-  implicit val mh = new MinHasher32(targetThreshold, maxBytes)
-
-  mh.numHashes
-  mh.numBands
-
-  val name = Set('q', 'w', 'e', 'r', 't', 'y')
-  val name1 = Set('q', 'w', 'e', 'r', 't', 'y', 'a')
-  List(name, name1).map { item ⇒
-    (item.mkString, item.map(i ⇒ mh.init(i.toLong)).reduce(mh.plus(_, _)))
-  }.flatMap {
-    case (itemId, sig) ⇒
-      mh.buckets(sig).zipWithIndex.map {
-        case (bucket, bucketIndex) ⇒
-          ((bucket, bucketIndex), Set((itemId, sig)))
-      }
-  }.groupBy(_._1).mapValues(_.map(_._2))
-  */
 
   @simulacrum.typeclass trait Hashing[Node] {
     def seed: Long
@@ -57,7 +36,9 @@ object Hashing2 {
   }
 
   /**
-   * Highest Random Weight (HRW) hashing https://github.com/clohfink/RendezvousHash
+   * Highest Random Weight (HRW) hashing
+   * https://github.com/clohfink/RendezvousHash
+   * https://www.pvk.ca
    * A random uniform way to partition your keyspace up among the available nodes
    */
   @simulacrum.typeclass trait Rendezvous[Node] extends Hashing[Node] {
@@ -76,10 +57,10 @@ object Hashing2 {
       val iter = members.iterator
       while (iter.hasNext) {
         val node = iter.next
-        val keyBytes = key.getBytes
+        val keyBytes = key.getBytes("UTF-8")
         val nodeBytes = toBinary(node)
-        val bytes = ByteBuffer.allocate(keyBytes.length + nodeBytes.length).put(keyBytes).put(nodeBytes).array
-        val nodeHash128bit = CassandraMurmurHash.hash3_x64_128(ByteBuffer.wrap(bytes), 0, bytes.length, seed)(1)
+        val byteBuffer = ByteBuffer.allocate(keyBytes.length + nodeBytes.length).put(keyBytes).put(nodeBytes)
+        val nodeHash128bit = CassandraMurmurHash.hash3_x64_128(byteBuffer, 0, byteBuffer.array.length, seed)(1)
         candidates = candidates + (nodeHash128bit → node)
       }
       candidates.take(rf).map(_._2)
@@ -112,12 +93,12 @@ object Hashing2 {
       arr
     }
 
-    private def readInt(arr: Array[Byte], offset: Int): Int = {
+    /*private def readInt(arr: Array[Byte], offset: Int): Int = {
       (arr(offset) << 24) |
         (arr(offset + 1) & 0xff) << 16 |
         (arr(offset + 2) & 0xff) << 8 |
         (arr(offset + 3) & 0xff)
-    }
+    }*/
 
     override def removeNode(node: Node): Boolean = {
       //println(s"remove $node")
@@ -148,7 +129,7 @@ object Hashing2 {
       if (rf > ring.keySet.size)
         throw new Exception("Replication factor more than the number of the ranges on a ring")
 
-      val bytes = key.getBytes
+      val bytes = key.getBytes("UTF-8")
       val keyHash128bit = CassandraMurmurHash.hash3_x64_128(ByteBuffer.wrap(bytes), 0, bytes.length, seed)(1)
       if (ring.containsKey(keyHash128bit)) {
         ring.keySet.asScala.take(rf).map(ring.get).to[scala.collection.immutable.Set]
@@ -230,14 +211,14 @@ object Hashing2 {
 
   object Consistent {
     implicit def instance = new Consistent[String] {
-      override def toBinary(node: String): Array[Byte] = node.getBytes("utf-8")
+      override def toBinary(node: String): Array[Byte] = node.getBytes("UTF-8")
       override def validated(node: String): Boolean = true
     }
   }
 
   object Rendezvous {
     implicit def instance = new Rendezvous[String] {
-      override def toBinary(node: String): Array[Byte] = node.getBytes("utf-8")
+      override def toBinary(node: String): Array[Byte] = node.getBytes("UTF-8")
       override def validated(node: String): Boolean = true
     }
   }
