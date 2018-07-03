@@ -38,7 +38,7 @@ object Hashing2 {
   /**
    * Highest Random Weight (HRW) hashing
    * https://github.com/clohfink/RendezvousHash
-   * https://www.pvk.ca
+   * https://www.pvk.ca/Blog/2017/09/24/rendezvous-hashing-my-baseline-consistent-distribution-method/
    * A random uniform way to partition your keyspace up among the available nodes
    */
   @simulacrum.typeclass trait Rendezvous[Node] extends Hashing[Node] {
@@ -135,16 +135,11 @@ object Hashing2 {
         ring.keySet.asScala.take(rf).map(ring.get).to[scala.collection.immutable.Set]
       } else {
         val tailMap = ring.tailMap(keyHash128bit)
-        if (tailMap.isEmpty) { //out of range
-          ring.keySet.asScala.take(rf).map(ring.get).to[scala.collection.immutable.Set]
-        } else {
-          //moving clockwise in the ring until the next key is greater than or equal to fromKey
-          val candidates = tailMap.keySet.asScala.take(rf).map(ring.get).to[scala.collection.immutable.Set]
-          if (candidates.size < rf) {
-            //we must be at the end of the ring so we go to the first entry and so on
-            candidates ++ ring.keySet.asScala.take(rf - candidates.size).map(ring.get).to[scala.collection.immutable.Set]
-          } else candidates
-        }
+        val candidates = tailMap.keySet.asScala.take(rf).map(ring.get).to[scala.collection.immutable.Set]
+        if (candidates.size < rf) {
+          //we must be at the end of the ring so we go to the first entry and so on
+          candidates ++ ring.keySet.asScala.take(rf - candidates.size).map(ring.get).to[scala.collection.immutable.Set]
+        } else candidates
       }
     }
 
