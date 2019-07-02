@@ -8,7 +8,7 @@ import scala.language.postfixOps
 
 /*
   Version with router. More appropriate version can be found in Hashing2
-*/
+ */
 object Hashing {
 
   sealed trait Hashing
@@ -48,22 +48,21 @@ object Hashing {
       members.remove(node)
     }
 
-    override def addNode(node: Node): Boolean = {
+    override def addNode(node: Node): Boolean =
       if (validate(node)) {
         //println(s"add $node")
         members.add(node)
       } else false
-    }
 
     override def nodeFor(key: String, rf: Int): Set[Node] = {
       var allHashes = SortedSet.empty[Item]((x: Item, y: Item) ⇒ -x.hash.compare(y.hash))
-      val iter = members.iterator
+      val iter      = members.iterator
       while (iter.hasNext) {
-        val node = iter.next
-        val keyBytes = key.getBytes
+        val node      = iter.next
+        val keyBytes  = key.getBytes
         val nodeBytes = toBinary(node)
-        val bytes = ByteBuffer.allocate(keyBytes.length + nodeBytes.length).put(keyBytes).put(nodeBytes).array()
-        val hash0 = hash.arrayHash(bytes)
+        val bytes     = ByteBuffer.allocate(keyBytes.length + nodeBytes.length).put(keyBytes).put(nodeBytes).array()
+        val hash0     = hash.arrayHash(bytes)
         allHashes = allHashes + Item(hash0, node)
       }
       allHashes.take(rf).map(_.node)
@@ -73,7 +72,7 @@ object Hashing {
   //https://infinitescript.com/2014/10/consistent-hash-ring/
   //https://community.oracle.com/blogs/tomwhite/2007/11/27/consistent-hashing
   trait ConsistentHash[Node, H <: Hashing] extends HashingAlg[Node, H] {
-    import java.util.{ SortedMap ⇒ JSortedMap, TreeMap ⇒ JTreeMap }
+    import java.util.{SortedMap ⇒ JSortedMap, TreeMap ⇒ JTreeMap}
     protected val ring: JSortedMap[Int, Node] = new JTreeMap[Int, Node]()
 
     override def removeNode(node: Node): Boolean = {
@@ -83,7 +82,7 @@ object Hashing {
       node == ring.remove(hash0)
     }
 
-    override def addNode(node: Node): Boolean = {
+    override def addNode(node: Node): Boolean =
       if (validate(node)) {
         val bytes = toBinary(node)
         //val hash =  new BigInteger(1, bytes.md5.bytes).intValue()
@@ -92,7 +91,6 @@ object Hashing {
         ring.put(hash0, node)
         true
       } else false
-    }
 
     override def nodeFor(key: String, rf: Int): Set[Node] = {
       val bytes = key.getBytes
@@ -109,18 +107,16 @@ object Hashing {
     implicit val chString = new ConsistentHash[String, ConsistentHashing] {
       override def toBinary(node: String): Array[Byte] = node.getBytes
 
-      override def validate(node: String): Boolean = {
+      override def validate(node: String): Boolean =
         //TODO: Pattern for IpAddress
         true
-      }
     }
 
     implicit val rendezvousString = new Rendezvous[String, RendezvousHashing] {
       override def toBinary(node: String): Array[Byte] = node.getBytes
-      override def validate(node: String): Boolean = {
+      override def validate(node: String): Boolean     =
         //TODO: Pattern for IpAddress
         true
-      }
     }
 
     def apply[Node, A <: Hashing](implicit alg: HashingAlg[Node, A]): HashingAlg[Node, A] =
@@ -148,11 +144,12 @@ object Hashing {
   }
 
   object HashingRouter {
-    def apply[Node, A <: Hashing](nodes: util.Collection[Node])(implicit hashingAlg: HashingAlg[Node, A]): HashingRouter[Node, A] = {
+    def apply[Node, A <: Hashing](
+      nodes: util.Collection[Node]
+    )(implicit hashingAlg: HashingAlg[Node, A]): HashingRouter[Node, A] =
       new HashingRouter[Node, A] {
         override type B = HashingAlg[Node, A]
         override val alg = hashingAlg
       }.withNodes(nodes)
-    }
   }
 }

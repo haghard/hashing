@@ -9,33 +9,32 @@ import zipkin.reporter.AsyncReporter
 import zipkin.reporter.okhttp3.OkHttpSender
 
 /**
- * Using a tracer, you can create a root span capturing the critical path of a request. Child
- * spans can be created to allocate latency relating to outgoing requests.
- *
- * Here's a contrived example:
- * <pre>{@code
- * Span twoPhase = tracer.newTrace().name("twoPhase").start();
- * try {
- *   Span prepare = tracer.newChild(twoPhase.context()).name("prepare").start();
- *   try {
- *     prepare();
- *   } finally {
- *     prepare.finish();
- * }
- * Span commit = tracer.newChild(twoPhase.context()).name("commit").start();
- * try {
- * commit();
- * } finally {
- *     commit.finish();
- * }
- * } finally {
- *   twoPhase.finish();
- * }
- * }</pre>
- *
- */
-
-import hashing.Hashing.{ ConsistentHashing, HashingRouter, RendezvousHashing }
+  * Using a tracer, you can create a root span capturing the critical path of a request. Child
+  * spans can be created to allocate latency relating to outgoing requests.
+  *
+  * Here's a contrived example:
+  * <pre>{@code
+  * Span twoPhase = tracer.newTrace().name("twoPhase").start();
+  * try {
+  *   Span prepare = tracer.newChild(twoPhase.context()).name("prepare").start();
+  *   try {
+  *     prepare();
+  *   } finally {
+  *     prepare.finish();
+  * }
+  * Span commit = tracer.newChild(twoPhase.context()).name("commit").start();
+  * try {
+  * commit();
+  * } finally {
+  *     commit.finish();
+  * }
+  * } finally {
+  *   twoPhase.finish();
+  * }
+  * }</pre>
+  *
+  */
+import hashing.Hashing.{ConsistentHashing, HashingRouter, RendezvousHashing}
 
 //https://github.com/lloydmeta/zipkin-futures/blob/master/zipkin-futures-core/src/test/scala/com/beachape/zipkin/services/ZipkinServiceSpec.scala
 //https://github.com/openzipkin/brave/blob/master/brave/README.md
@@ -47,9 +46,11 @@ import hashing.Hashing.{ ConsistentHashing, HashingRouter, RendezvousHashing }
 object CompareHashing {
   val keysNum = 500000
 
-  val sender = OkHttpSender.create("http://...:9411/api/v1/spans")
+  val sender   = OkHttpSender.create("http://...:9411/api/v1/spans")
   val reporter = AsyncReporter.builder(sender).build()
-  val tracing = Tracing.newBuilder().localServiceName("hashing")
+  val tracing = Tracing
+    .newBuilder()
+    .localServiceName("hashing")
     .reporter(reporter)
     .build()
 
@@ -108,16 +109,16 @@ object CompareHashing {
       val rootSpan = tracer.newTrace().name("hash").start()
 
       val distribution0: Map[String, AtomicInteger] = new util.HashMap[String, AtomicInteger]()
-      val span0 = tracer.newChild(rootSpan.context).name("consistent").start()
-      val ctx = span0.context()
+      val span0                                     = tracer.newChild(rootSpan.context).name("consistent").start()
+      val ctx                                       = span0.context()
       println(s"TraceId: ${ctx.traceIdString}  SpanId:${ctx.spanId}")
       iter(HashingRouter[String, ConsistentHashing](getNodes(distribution0)), distribution0)
       span0.finish()
 
       println("======: RendezvousHashing :========")
       val distribution1: Map[String, AtomicInteger] = new util.HashMap[String, AtomicInteger]()
-      val span1 = tracer.newChild(rootSpan.context).name("rendezvous").start()
-      val ctx1 = span1.context
+      val span1                                     = tracer.newChild(rootSpan.context).name("rendezvous").start()
+      val ctx1                                      = span1.context
       println(s"TraceId: ${ctx1.traceIdString}  SpanId:${ctx1.spanId}")
       iter(HashingRouter[String, RendezvousHashing](getNodes(distribution1)), distribution1)
       span1.finish()
@@ -146,4 +147,4 @@ object CompareHashing {
 
     ch.get(Some("key-a"))
     ch.get(Some("key-a"))
-*/ 
+ */

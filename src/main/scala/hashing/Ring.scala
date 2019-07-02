@@ -5,11 +5,12 @@ object Ring {
   case class NodeId(id: Int)
 
   /**
-   * Recommended by Riak nodesSize = 5, partitionsSize = 64
-   * @param nodesSize - nr of initial cluster size of nodes
-   * @param partitionsSize - nr of partitions Ring consists of
-   * @return representation of Ring
-   */
+    * Recommended by Riak nodesSize = 5, partitionsSize = 64
+    *
+    * @param nodesSize - nr of initial cluster size of nodes
+    * @param partitionsSize - nr of partitions Ring consists of
+    * @return representation of Ring
+    */
   def apply(nodesSize: Int, partitionsSize: Int): Ring =
     new Ring((0 until nodesSize).flatMap { id ⇒
       (id until partitionsSize by nodesSize).map((_, NodeId(id)))

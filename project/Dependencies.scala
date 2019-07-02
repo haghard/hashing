@@ -1,7 +1,7 @@
 import sbt._
 
 object Dependencies {
-  val akkaVersion = "2.5.4"
+  val akkaVersion = "2.5.23"
 
   object Compile {
     //val hasher = "com.roundeights" %% "hasher" % "1.2.0"
@@ -25,18 +25,20 @@ object Dependencies {
 
     val algebird = "com.twitter" %% "algebird-core" % "0.13.0"
 
-    //val ammonite = "com.lihaoyi" % "ammonite" % "1.0.1" % "test" cross CrossVersion.full
-    val ammonite = "com.lihaoyi" % "ammonite" % "1.0.3" % "test" cross CrossVersion.full
-
     val intervalset = "com.rklaehn" %% "intervalset" % "0.2.0"
 
+    //test:run
+    val ammonite = ("com.lihaoyi" % "ammonite" % "1.6.8" % "test").cross(CrossVersion.full)
+
+    val jumpCH = "testanythinghere" %% "testanythinghere" % "0.1"
+
     val all = Seq(brave, zipkinSender, opentracing, simulacrum, cats, shapeless,
-      reftree, akkaStream, algebird, ammonite /*, hasher, intervalset*/ )
+      reftree, akkaStream, algebird, ammonite, jumpCH)
   }
 
   object Test {
     //val akkaTestkit = "com.typesafe.akka" %% "akka-testkit" % akkaVersion % "test"
-    val scalatest = "org.scalatest" %% "scalatest" % "3.0.3" % "test"
+    val scalatest = "org.scalatest" %% "scalatest" % "3.0.8" % "test"
     val all = Seq(scalatest)
   }
 

@@ -39,20 +39,23 @@ object Pipelines {
 
   //Input -> Computation -> Output
   object Pipeline {
-    def apply[T: Filter, F[_]: cats.Functor, In, Out](implicit read: Source[F, In], computation: Transformation[In, Out], write: Sink[Out]) = {
-      val F: Functor[F] = implicitly[Functor[F]]
-      val f: Filter[T] = implicitly[Filter[T]]
+    def apply[T: Filter, F[_]: cats.Functor, In, Out](
+      implicit read: Source[F, In],
+      computation: Transformation[In, Out],
+      write: Sink[Out]
+    ) = {
+      val F: cats.Functor[F] = implicitly[cats.Functor[F]]
+      val f: Filter[T]       = implicitly[Filter[T]]
       new Pipeline[T, In, Out] {
         type Out = Either[String, F[Unit]]
         override def feed(input: String): Out = {
           val b = input.contains(f.segment)
           println(s"input: $input - filter: ${f.segment} res: $b")
           if (b) Right {
-            val in = read(input)
+            val in       = read(input)
             val computed = F.map(in)(computation)
             F.map(computed)(write)
-          }
-          else Left(input)
+          } else Left(input)
         }
       }
     }
@@ -76,18 +79,25 @@ object Pipelines {
     override def segment: String = "three"
   }
 
-  implicit val src = Source[Option, Int] { (line: String) ⇒ Option(line.length) }
-  implicit val map = Transformation { (v: Int) ⇒ v * -1 }
-  implicit val sink = Sink[Int] { (v: Int) ⇒ println(s"out > $v") }
+  implicit val src = Source[Option, Int] { (line: String) ⇒
+    Option(line.length)
+  }
+  implicit val map = Transformation { (v: Int) ⇒
+    v * -1
+  }
+  implicit val sink = Sink[Int] { (v: Int) ⇒
+    println(s"out > $v")
+  }
 
   val pipelines =
-    Pipeline[One, Option, Int, Int].feed("three")
+    Pipeline[One, Option, Int, Int]
+      .feed("three")
       .fold(
-        Pipeline[Two, Option, Int, Int].feed(_)
-          .fold(
-            Pipeline[Three, Option, Int, Int].feed(_).fold(Left(_), Right(_)),
-            Right(_)),
-        Right(_))
+        Pipeline[Two, Option, Int, Int]
+          .feed(_)
+          .fold(Pipeline[Three, Option, Int, Int].feed(_).fold(Left(_), Right(_)), Right(_)),
+        Right(_)
+      )
 
   /*
   def second(in: String) =
@@ -95,7 +105,7 @@ object Pipelines {
 
   def third(in: String) =
     Pipeline[Three, Option, Int, Int].feed(in).fold(Left(_), Right(_))
-  */
+   */
 
   pipelines
 }

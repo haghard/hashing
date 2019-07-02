@@ -1,14 +1,14 @@
 package hashing
 
-import java.util.{ SortedMap ⇒ JSortedMap, TreeMap ⇒ JTreeMap }
+import java.util.{SortedMap ⇒ JSortedMap, TreeMap ⇒ JTreeMap}
 
 import scala.collection.immutable.LinearSeq
 
 //https://gist.github.com/opyate/1927001
 
 /**
- * Inspired by http://www.lexemetech.com/2007/11/consistent-hashing.html
- */
+  * Inspired by http://www.lexemetech.com/2007/11/consistent-hashing.html
+  */
 object ConsistentHash {
 
   def apply[K <% Ordered[K], V](hashFunction: HashFunction[K], numberOfReplicas: Int, nodes: LinearSeq[V]) = {
@@ -19,17 +19,21 @@ object ConsistentHash {
 }
 
 /**
- * HashFunction returns a hash of type K, which will be Ordered for the TreeMap
- * Nodes are of type V
- */
-class ConsistentHash[K <% Ordered[K], V] private (hashFunction: HashFunction[K], numberOfReplicas: Int, nodes: LinearSeq[V]) {
-  var numNodes = 0
-  val SEPARATOR = ":"
+  * HashFunction returns a hash of type K, which will be Ordered for the TreeMap
+  * Nodes are of type V
+  */
+class ConsistentHash[K <% Ordered[K], V] private (
+  hashFunction: HashFunction[K],
+  numberOfReplicas: Int,
+  nodes: LinearSeq[V]
+) {
+  var numNodes               = 0
+  val SEPARATOR              = ":"
   val ring: JSortedMap[K, V] = new JTreeMap[K, V]()
 
   /**
-   * Add a node V to the pool.
-   */
+    * Add a node V to the pool.
+    */
   def add(node: Option[V]) {
     node.map { n ⇒
       (0 to numberOfReplicas).foreach { i ⇒
@@ -41,8 +45,8 @@ class ConsistentHash[K <% Ordered[K], V] private (hashFunction: HashFunction[K],
   }
 
   /**
-   * Remove a node V from the pool.
-   */
+    * Remove a node V from the pool.
+    */
   def remove(node: Option[V]) {
     node.map { n ⇒
       (0 to numberOfReplicas).foreach { i ⇒
@@ -54,22 +58,24 @@ class ConsistentHash[K <% Ordered[K], V] private (hashFunction: HashFunction[K],
   }
 
   /**
-   * @return the cache node that will contain our object, by key.
-   */
+    * @return the cache node that will contain our object, by key.
+    */
   def get(key: Option[AnyRef]): Option[V] = ring.isEmpty match {
     case true ⇒ throw new RuntimeException("No nodes in ring")
     case false ⇒ {
-      key.map { k ⇒
-        hashFunction.hash(k) match {
-          case hash if (!ring.containsKey(hash)) ⇒ {
-            ring.tailMap(hash) match {
-              case tailMap if (tailMap.isEmpty) ⇒ Some(ring.get(ring.firstKey))
-              case tailMap                      ⇒ Some(ring.get(tailMap.firstKey))
+      key
+        .map { k ⇒
+          hashFunction.hash(k) match {
+            case hash if (!ring.containsKey(hash)) ⇒ {
+              ring.tailMap(hash) match {
+                case tailMap if (tailMap.isEmpty) ⇒ Some(ring.get(ring.firstKey))
+                case tailMap                      ⇒ Some(ring.get(tailMap.firstKey))
+              }
             }
+            case hash ⇒ Some(ring.get(hash))
           }
-          case hash ⇒ Some(ring.get(hash))
         }
-      }.getOrElse(None)
+        .getOrElse(None)
     }
   }
 
@@ -80,7 +86,7 @@ trait HashFunction[H] {
   def hash(o: AnyRef): H
 }
 
-import java.io.{ ByteArrayOutputStream, ObjectOutputStream }
+import java.io.{ByteArrayOutputStream, ObjectOutputStream}
 import java.math.BigInteger
 import java.security.MessageDigest
 
@@ -88,13 +94,12 @@ class MD5HashFunction extends HashFunction[String] {
 
   val md: MessageDigest = MessageDigest.getInstance("MD5")
 
-  override def hash(o: AnyRef): String = {
+  override def hash(o: AnyRef): String =
     byteArrayToString(md.digest(toBinary(o)))
-  }
 
   private[this] def byteArrayToString(data: Array[Byte]): String = {
     val bigInteger = new BigInteger(1, data)
-    var hash = bigInteger.toString(16)
+    var hash       = bigInteger.toString(16)
     while (hash.length() < 32) {
       hash = "0" + hash
     }
@@ -121,20 +126,22 @@ class MD5HashFunction extends HashFunction[String] {
 import java.util.Random
 
 /**
- * Drives our implementation, and generates some stats.
- */
+  * Drives our implementation, and generates some stats.
+  */
 class Runner {
   val quiet = true
 
-  implicit def cacheAsString(cache: Option[Cache]): String = cache.map {
-    _.toString
-  }.getOrElse("-NOCACHE-")
+  implicit def cacheAsString(cache: Option[Cache]): String =
+    cache
+      .map {
+        _.toString
+      }
+      .getOrElse("-NOCACHE-")
 
   implicit def optionAnyToString(o: Option[Any]): String = o.map(_.toString).getOrElse("")
 
-  def stat(ch: ConsistentHash[_, _], objects: IndexedSeq[CachableThingy]) = {
+  def stat(ch: ConsistentHash[_, _], objects: IndexedSeq[CachableThingy]) =
     (for { o ← objects } yield ch.get(Some(o))).groupBy(x ⇒ x).map { case (k, v) ⇒ v.size }
-  }
 
   def sq(i: Double) = i * i
 
@@ -163,7 +170,9 @@ class Runner {
 
   def run(numobjects: Int, vnodes: Int) = {
     debug("\n\n%s objects, and %s vnodes".format(numobjects, vnodes))
-    val ch = ConsistentHash(new MD5HashFunction, vnodes,
+    val ch = ConsistentHash(
+      new MD5HashFunction,
+      vnodes,
       List(
         Cache("alpha"),
         Cache("beta"),
@@ -174,7 +183,9 @@ class Runner {
         Cache("eta"),
         Cache("theta"),
         Cache("iota"),
-        Cache("kappa")))
+        Cache("kappa")
+      )
+    )
     val rand = new Random(System.currentTimeMillis())
     val objects: IndexedSeq[CachableThingy] = for { i ← 0 until numobjects } yield {
       CachableThingy(rand.nextInt(10000))

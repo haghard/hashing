@@ -1,3 +1,4 @@
 resolvers += Resolver.typesafeRepo("releases")
 
-addSbtPlugin("org.scalariform" % "sbt-scalariform" % "1.8.0")
+addSbtPlugin("com.scalapenos" % "sbt-prompt"  % "1.0.2")
+addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.0.2")

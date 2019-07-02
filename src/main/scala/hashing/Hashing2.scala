@@ -1,18 +1,23 @@
 package hashing
 
 import java.nio.ByteBuffer
-import java.nio.charset.Charset
 import java.util
 import java.util.concurrent.ConcurrentSkipListSet
 
+import com.github.ssedano.hash.JumpConsistentHash
 import com.twitter.algebird.CassandraMurmurHash
 
 import scala.collection.immutable.SortedSet
 import scala.reflect.ClassTag
+import java.nio.charset.StandardCharsets._
 
 object Hashing2 {
 
-  @simulacrum.typeclass trait Hashing[Node] {
+  /*
+    Data sharding where everything related to a given key to hit the same machine
+   */
+  @simulacrum.typeclass
+  trait Hashing[Node] {
     def seed: Long
     def name: String
 
@@ -36,30 +41,31 @@ object Hashing2 {
   }
 
   /**
-   * Highest Random Weight (HRW) hashing
-   * https://github.com/clohfink/RendezvousHash
-   * https://www.pvk.ca/Blog/2017/09/24/rendezvous-hashing-my-baseline-consistent-distribution-method/
-   * A random uniform way to partition your keyspace up among the available nodes
-   */
-  @simulacrum.typeclass trait Rendezvous[Node] extends Hashing[Node] {
-    override val seed = 512l
-    override val name = "rendezvous-hashing"
-    protected val members = new ConcurrentSkipListSet[Node]()
+    * Highest Random Weight (HRW) hashing
+    * https://github.com/clohfink/RendezvousHash
+    * https://www.pvk.ca/Blog/2017/09/24/rendezvous-hashing-my-baseline-consistent-distribution-method/
+    * A random uniform way to partition your keyspace up among the available nodes
+    */
+  @simulacrum.typeclass
+  trait Rendezvous[Node] extends Hashing[Node] {
+    override val seed  = 512L
+    override val name  = "rendezvous-hashing"
+    protected val ring = new ConcurrentSkipListSet[Node]()
 
     override def removeNode(node: Node): Boolean =
-      members.remove(node)
+      ring.remove(node)
 
     override def addNode(node: Node): Boolean =
-      if (validated(node)) members.add(node) else false
+      if (validated(node)) ring.add(node) else false
 
     override def nodeFor(key: String, rf: Int): Set[Node] = {
       var candidates = SortedSet.empty[(Long, Node)]((x: (Long, Node), y: (Long, Node)) ⇒ -x._1.compare(y._1))
-      val iter = members.iterator
+      val iter       = ring.iterator
       while (iter.hasNext) {
-        val node = iter.next
-        val keyBytes = key.getBytes("UTF-8")
-        val nodeBytes = toBinary(node)
-        val byteBuffer = ByteBuffer.allocate(keyBytes.length + nodeBytes.length).put(keyBytes).put(nodeBytes)
+        val node           = iter.next
+        val keyBytes       = key.getBytes(UTF_8)
+        val nodeBytes      = toBinary(node)
+        val byteBuffer     = ByteBuffer.allocate(keyBytes.length + nodeBytes.length).put(keyBytes).put(nodeBytes)
         val nodeHash128bit = CassandraMurmurHash.hash3_x64_128(byteBuffer, 0, byteBuffer.array.length, seed)(1)
         candidates = candidates + (nodeHash128bit → node)
       }
@@ -75,13 +81,14 @@ object Hashing2 {
     We want to have an even split of the token range so that load can be well distributed between nodes,
       as well as the ability to add new nodes and have them take a fair share of the load without the necessity
       to move data between the existing nodes
-  */
-  @simulacrum.typeclass trait Consistent[Node] extends Hashing[Node] {
+   */
+  @simulacrum.typeclass
+  trait Consistent[Node] extends Hashing[Node] {
     import scala.collection.JavaConverters._
-    import java.util.{ SortedMap ⇒ JSortedMap, TreeMap ⇒ JTreeMap }
+    import java.util.{SortedMap ⇒ JSortedMap, TreeMap ⇒ JTreeMap}
     private val numberOfVNodes = 4
-    override val seed = 512l
-    override val name = "consistent-hashing"
+    override val seed          = 512L
+    override val name          = "consistent-hashing"
 
     private val ring: JSortedMap[Long, Node] = new JTreeMap[Long, Node]()
 
@@ -100,41 +107,39 @@ object Hashing2 {
         (arr(offset + 3) & 0xff)
     }*/
 
-    override def removeNode(node: Node): Boolean = {
+    override def removeNode(node: Node): Boolean =
       //println(s"remove $node")
       (0 to numberOfVNodes).foldLeft(true) { (acc, vNodeId) ⇒
         val vNodeSuffix = Array.ofDim[Byte](4)
         writeInt(vNodeSuffix, vNodeId, 0)
-        val bytes = toBinary(node) ++ vNodeSuffix
+        val bytes          = toBinary(node) ++ vNodeSuffix
         val nodeHash128bit = CassandraMurmurHash.hash3_x64_128(ByteBuffer.wrap(bytes), 0, bytes.length, seed)(1)
         //println(s"$node - vnode:$vNodeId")
         acc & node == ring.remove(nodeHash128bit)
       }
-    }
 
-    override def addNode(node: Node): Boolean = {
-      //Hash each node to several numberOfVNodes
+    override def addNode(node: Node): Boolean =
+      //Hash each node several times (VNodes)
       if (validated(node)) {
         (0 to numberOfVNodes).foldLeft(true) { (acc, i) ⇒
           val suffix = Array.ofDim[Byte](4)
           writeInt(suffix, i, 0)
-          val bytes = toBinary(node) ++ suffix
+          val bytes          = toBinary(node) ++ suffix
           val nodeHash128bit = CassandraMurmurHash.hash3_x64_128(ByteBuffer.wrap(bytes), 0, bytes.length, seed)(1)
           acc & (node == ring.put(nodeHash128bit, node))
         }
       } else false
-    }
 
     override def nodeFor(key: String, rf: Int): Set[Node] = {
       if (rf > ring.keySet.size)
         throw new Exception("Replication factor more than the number of the ranges on a ring")
 
-      val bytes = key.getBytes("UTF-8")
+      val bytes         = key.getBytes(UTF_8)
       val keyHash128bit = CassandraMurmurHash.hash3_x64_128(ByteBuffer.wrap(bytes), 0, bytes.length, seed)(1)
       if (ring.containsKey(keyHash128bit)) {
         ring.keySet.asScala.take(rf).map(ring.get).to[scala.collection.immutable.Set]
       } else {
-        val tailMap = ring.tailMap(keyHash128bit)
+        val tailMap    = ring.tailMap(keyHash128bit)
         val candidates = tailMap.keySet.asScala.take(rf).map(ring.get).to[scala.collection.immutable.Set]
         if (candidates.size < rf) {
           //we must be at the end of the ring so we go to the first entry and so on
@@ -143,9 +148,27 @@ object Hashing2 {
       }
     }
 
+    def showDiff: String = {
+      val iter = ring.keySet.iterator
+      val sb   = new StringBuilder
+
+      var prevKey = Long.MinValue
+      while (iter.hasNext) {
+        if (prevKey == Long.MinValue)
+          prevKey = iter.next
+        else {
+          val key  = iter.next
+          val diff = key - prevKey
+          sb.append(s"${key} - ${prevKey} = $diff").append("\n")
+          prevKey = key
+        }
+      }
+      sb.toString
+    }
+
     override def toString: String = {
       val iter = ring.keySet.iterator
-      val sb = new StringBuilder
+      val sb   = new StringBuilder
       while (iter.hasNext) {
         val key = iter.next
         sb.append(s"[${key}: ${ring.get(key)}]").append("->")
@@ -207,15 +230,20 @@ object Hashing2 {
   object Consistent {
     implicit def instance = new Consistent[String] {
       override def toBinary(node: String): Array[Byte] = node.getBytes("UTF-8")
-      override def validated(node: String): Boolean = true
+      override def validated(node: String): Boolean    = true
     }
   }
 
   object Rendezvous {
     implicit def instance = new Rendezvous[String] {
       override def toBinary(node: String): Array[Byte] = node.getBytes("UTF-8")
-      override def validated(node: String): Boolean = true
+      override def validated(node: String): Boolean    = true
     }
+
+    /*implicit def instance1 = new Rendezvous[Int] {
+      override def toBinary(node: Int): Array[Byte] = "node".getBytes("UTF-8")
+      override def validated(node: Int): Boolean = true
+    }*/
   }
 
   /*object MinHashing {
@@ -226,8 +254,19 @@ object Hashing2 {
   }*/
 
   object HashingRouter {
+
+    //HashingRouter.create2[Consistent, String]
+    def create2[F[_], A: ClassTag](implicit tag: ClassTag[A], hashAlg: F[A]): F[A] =
+      hashAlg
+
+    //HashingRouter.create[String, Consistent]
+    def create[A: ClassTag, F[A] <: Hashing[A]](implicit tag: ClassTag[A], hashAlg: F[A]): F[A] =
+      //println(tag.runtimeClass.getName)
+      //println(hashAlg.getClass.getName)
+      hashAlg
+
     //Phantom type
-    def apply[A <: Hashing[_]: ClassTag](implicit tag: ClassTag[A], alg: A): Hashing[T] forSome { type T } = {
+    def apply[F <: Hashing[_]: ClassTag](implicit tag: ClassTag[F], alg: F): Hashing[T] forSome { type T } = {
       //val alg = implicitly[A]
       println(tag.runtimeClass.getName)
       println(alg.getClass.getName)
@@ -237,6 +276,7 @@ object Hashing2 {
   }
 
   //HashingRouter[Consistent[String]]
+
   //HashingRouter[Rendezvous[String]]
 
   /*
@@ -246,7 +286,7 @@ object Hashing2 {
   sealed trait HashingRouter[A <: Hashing[N], N] {
     def withNodes(nodes: util.Collection[N]): A
   }
-  */
+   */
 
   /*
   trait HashRouter {
@@ -286,6 +326,6 @@ object Hashing2 {
     r.alg
     //???
   }
-*/
+ */
 
 }

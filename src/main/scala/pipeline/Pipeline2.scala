@@ -9,24 +9,30 @@ object Pipeline2 {
     import shapeless._
 
     //pitfall!!! if this is a val Ops won't work
-    implicit def PNil: Flow.Aux[CNil, CNil, CNil, Unit :+: CNil] = {
+    implicit def PNil: Flow.Aux[CNil, CNil, CNil, Unit :+: CNil] =
       new Flow[CNil, CNil, CNil] {
         type Out = Unit :+: CNil
         override def apply(input: String): Out = Inl(())
       }
-    }
 
-    implicit def inductivePipeline[TH, F[_], AH, BH, TT <: Coproduct, AT <: Coproduct, BT <: Coproduct, OT <: Coproduct](implicit head: Flow.Aux[TH, AH, BH, Flow.Out[F]], tail: Flow.Aux[TT, AT, BT, OT]): Flow.Aux[TH :+: TT, AH :+: AT, BH :+: BT, F[Unit] :+: OT] = {
+    implicit def inductivePipeline[TH, F[_], AH, BH, TT <: Coproduct, AT <: Coproduct, BT <: Coproduct, OT <: Coproduct](
+      implicit head: Flow.Aux[TH, AH, BH, Flow.Out[F]],
+      tail: Flow.Aux[TT, AT, BT, OT]
+    ): Flow.Aux[TH :+: TT, AH :+: AT, BH :+: BT, F[Unit] :+: OT] =
       new Flow[TH :+: TT, AH :+: AT, BH :+: BT] {
         final override type Out = F[Unit] :+: OT
-        final override def apply(input: String): Out = {
-          head(input).fold({ _ ⇒ Inr(tail(input)) }, s ⇒ Inl(s))
-        }
+        final override def apply(input: String): Out =
+          head(input).fold({ _ ⇒
+            Inr(tail(input))
+          }, s ⇒ Inl(s))
       }
-    }
 
-    implicit class Ops[TT <: Coproduct, AT <: Coproduct, BT <: Coproduct, OT <: Coproduct](val tail: Flow.Aux[TT, AT, BT, OT]) extends AnyVal {
-      def +:[TH, F[_], AH, BH](head: Flow.Aux[TH, AH, BH, Flow.Out[F]]): Flow.Aux[TH :+: TT, AH :+: AT, BH :+: BT, F[Unit] :+: OT] =
+    implicit class Ops[TT <: Coproduct, AT <: Coproduct, BT <: Coproduct, OT <: Coproduct](
+      val tail: Flow.Aux[TT, AT, BT, OT]
+    ) extends AnyVal {
+      def +:[TH, F[_], AH, BH](
+        head: Flow.Aux[TH, AH, BH, Flow.Out[F]]
+      ): Flow.Aux[TH :+: TT, AH :+: AT, BH :+: BT, F[Unit] :+: OT] =
         inductivePipeline[TH, F, AH, BH, TT, AT, BT, OT](head, tail)
     }
   }
@@ -69,26 +75,27 @@ object Pipeline2 {
   }
 
   object Flow {
-    type Out[F[_]] = Either[Unit, F[Unit]]
+    type Out[F[_]]              = Either[Unit, F[Unit]]
     type Default[T, F[_], A, B] = Aux[T, A, B, Out[F]]
-    type Aux[T, A, B, O] = Flow[T, A, B] { type Out = O }
+    type Aux[T, A, B, O]        = Flow[T, A, B] { type Out = O }
 
-    final def apply[T: Algorithm, F[_]: Functor, A, B](implicit
-      read: Source[F, A],
-                                                       T: Transformation[A, B], write: Sink[B]): Default[T, F, A, B] = {
+    final def apply[T: Algorithm, F[_]: Functor, A, B](
+      implicit read: Source[F, A],
+      T: Transformation[A, B],
+      write: Sink[B]
+    ): Default[T, F, A, B] = {
       val G: Algorithm[T] = implicitly
-      val F: Functor[F] = implicitly
+      val F: Functor[F]   = implicitly
       new Flow[T, A, B] {
         final override type Out = Flow.Out[F]
         override def apply(input: String): Out = {
           val b = input.contains(G.name)
           println(s"$input matches(${G.name}) = $b")
           if (b) Right {
-            val in = read(input)
+            val in       = read(input)
             val computed = F.map(in)(T)
             F.map(computed)(write)
-          }
-          else Left(())
+          } else Left(())
         }
       }
     }
@@ -99,13 +106,19 @@ object Pipeline2 {
   trait Three
 
   object allImplicits {
-    implicit val a = new Algorithm[One] { override val name = "one" }
-    implicit val b = new Algorithm[Two] { override val name = "two" }
+    implicit val a = new Algorithm[One]   { override val name = "one"    }
+    implicit val b = new Algorithm[Two]   { override val name = "two"    }
     implicit val c = new Algorithm[Three] { override val name = "lenght" }
 
-    implicit val src = Source[Option, Int] { (line: String) ⇒ Option(line.length) }
-    implicit val map = Transformation { (v: Int) ⇒ v * -1 }
-    implicit val consoleSink = Sink[Int] { (v: Int) ⇒ println(s"out > $v") }
+    implicit val src = Source[Option, Int] { (line: String) ⇒
+      Option(line.length)
+    }
+    implicit val map = Transformation { (v: Int) ⇒
+      v * -1
+    }
+    implicit val consoleSink = Sink[Int] { (v: Int) ⇒
+      println(s"out > $v")
+    }
   }
 
   import implicits._

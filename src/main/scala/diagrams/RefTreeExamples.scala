@@ -7,7 +7,7 @@ object RefTreeExamples {
   import reftree.render._
   import reftree.diagram._
   import java.nio.file.Paths
-  import Diagram.{ sourceCodeCaption ⇒ diagram }
+  import Diagram.{sourceCodeCaption ⇒ diagram}
 
   case class Tree(value: Int, children: List[Tree])
 
@@ -16,7 +16,7 @@ object RefTreeExamples {
     .tweakField("size", _.withName("s")) // label the field “s”, instead of “size”
     .tweakField("value", _.withTreeHighlight(true)) // highlight the value
     .tweakField("children", _.withoutName)) // do not label the “children” field
-    */
+   */
 
   implicit val config = ToRefTree.DerivationConfig[Tree].rename("tree").tweakField("children", _.withoutName)
 
@@ -44,9 +44,12 @@ object RefTreeExamples {
     case class Project(id: String)
     case class Tenant(id: String, projects: List[Project])
     //val tb3 = Tenant("tenant.1", Vector(Project("tenant.1.project.1"), Project("tenant.1.project.2"), Project("tenant.1.project.3")))
-    val tb3 = Tenant("tenant.1", Project("tenant.1.project.1") :: Project("tenant.1.project.2") :: Project("tenant.1.project.3") :: Nil)
+    val tb3 = Tenant(
+      "tenant.1",
+      Project("tenant.1.project.1") :: Project("tenant.1.project.2") :: Project("tenant.1.project.3") :: Nil
+    )
 
-    import reftree.contrib.SimplifiedInstances.{ list, seq }
+    import reftree.contrib.SimplifiedInstances.{list, seq}
     import reftree.contrib.OpticInstances._
 
     val renderer = Renderer(renderingOptions = RenderingOptions(density = 20), directory = Paths.get("images"))
@@ -59,7 +62,7 @@ object RefTreeExamples {
     case class ShardEntity(id: String)
     case class Shard(id: String, item: List[ShardEntity])
 
-    import reftree.contrib.SimplifiedInstances.{ list, seq }
+    import reftree.contrib.SimplifiedInstances.{list, seq}
     val shards = Shard("a", ShardEntity("aa") :: ShardEntity("ab") :: ShardEntity("ac") :: Nil) ::
       Shard("b", ShardEntity("ba") :: ShardEntity("bb") :: ShardEntity("bc") :: Nil) :: Nil
 
