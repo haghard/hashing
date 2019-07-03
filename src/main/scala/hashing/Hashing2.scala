@@ -4,7 +4,6 @@ import java.nio.ByteBuffer
 import java.util
 import java.util.concurrent.ConcurrentSkipListSet
 
-import com.github.ssedano.hash.JumpConsistentHash
 import com.twitter.algebird.CassandraMurmurHash
 
 import scala.collection.immutable.SortedSet

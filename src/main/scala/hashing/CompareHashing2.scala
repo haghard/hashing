@@ -130,7 +130,6 @@ object CompareHashing2 {
     ch0.nodeCount == nodes.size
     ch0.lookup("a")*/
 
-
     val latency = System.currentTimeMillis - start
     println("==============")
     println("Latency: " + latency)
