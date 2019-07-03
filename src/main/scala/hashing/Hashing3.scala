@@ -144,7 +144,7 @@ object Hashing3 {
     override type A       = Rendezvous[Replica]
   }
 
-  @implicitNotFound(msg = "Cannot find Hash type class instance for ${T}")
+  @implicitNotFound(msg = "Cannot find HashBuilder type class instance for ${T}")
   trait HashBuilder[T <: HashTypesModule] {
     def replicas(replicas: Set[T#Replica]): T#A
   }
