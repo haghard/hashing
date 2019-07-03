@@ -28,6 +28,8 @@ object Hashing3 {
     def addReplica(node: T): Boolean
 
     def replicaFor(key: String, rf: Int): Set[T]
+
+    def numOfReplicas: Int
   }
 
   trait Consistent[T] extends HashAlg[T] {
@@ -89,11 +91,17 @@ object Hashing3 {
       }
     }
 
-    def numOfVnodes: Int = numberOfVNodes
+    override def numOfReplicas: Int = replicas.size
 
-    def numOfReplicas: Int = replicas.size
+    def numOfVnodes: Int = numberOfVNodes
   }
 
+  /**
+    * Highest Random Weight (HRW) hashing
+    * https://github.com/clohfink/RendezvousHash
+    * https://www.pvk.ca/Blog/2017/09/24/rendezvous-hashing-my-baseline-consistent-distribution-method/
+    * A random uniform way to partition your keyspace up among the available nodes
+    */
   trait Rendezvous[T] extends HashAlg[T] {
     private val seed = 512L
     private val ring = new ConcurrentSkipListSet[T]()
@@ -118,7 +126,7 @@ object Hashing3 {
       candidates.take(rf).map(_._2)
     }
 
-    def numOfReplicas: Int = ring.size()
+    override def numOfReplicas: Int = ring.size
   }
 
   trait ConsistentForStrings extends HashTypesModule {
@@ -137,14 +145,17 @@ object Hashing3 {
   }
 
   @implicitNotFound(msg = "Cannot find Hash type class instance for ${T}")
-  trait Hash[T <: HashTypesModule] {
-    def alg: T#A
+  trait HashBuilder[T <: HashTypesModule] {
+    def replicas(replicas: Set[T#Replica]): T#A
   }
 
-  object Hash {
+  object HashBuilder {
 
-    implicit object a extends Hash[ConsistentForStrings] {
-      override val alg: Consistent[String] = new Consistent[String] {
+    implicit object a extends HashBuilder[ConsistentForStrings] {
+      override def replicas(replicas: Set[String]): Consistent[String] = new Consistent[String] {
+
+        replicas.foreach(addReplica(_))
+
         override val name: String = "consistent-hashing for string"
 
         override def toBinary(node: String): Array[Byte] =
@@ -152,8 +163,11 @@ object Hashing3 {
       }
     }
 
-    implicit object b extends Hash[ConsistentForLongs] {
-      override val alg: Consistent[Long] = new Consistent[Long] {
+    implicit object b extends HashBuilder[ConsistentForLongs] {
+      override def replicas(replicas: Set[Long]): Consistent[Long] = new Consistent[Long] {
+
+        replicas.foreach(addReplica(_))
+
         override val name: String = "consistent-hashing for longs"
 
         override def toBinary(node: Long): Array[Byte] =
@@ -161,22 +175,26 @@ object Hashing3 {
       }
     }
 
-    implicit object c extends Hash[RendezvousForStrings] {
-      override val alg: Rendezvous[String] = new Rendezvous[String] {
-        override val name: String = "rendezvous for longs"
+    implicit object c extends HashBuilder[RendezvousForStrings] {
+      override def replicas(replicas: Set[String]): Rendezvous[String] = new Rendezvous[String] {
+
+        replicas.foreach(addReplica(_))
+
+        override val name: String = "rendezvous for string"
         override def toBinary(node: String): Array[Byte] =
           node.getBytes(UTF_8)
       }
     }
 
-    def apply[T <: HashTypesModule: Hash]: Hash[T] =
-      implicitly[Hash[T]]
+    def apply[T <: HashTypesModule: HashBuilder]: HashBuilder[T] =
+      implicitly[HashBuilder[T]]
   }
 
-  Hash[ConsistentForStrings].alg
+  HashBuilder[ConsistentForStrings].replicas(Set("a", "b", "c", "d"))
 
-  val alg = Hash[RendezvousForStrings].alg
+  val alg = HashBuilder[RendezvousForStrings].replicas(Set("a", "b", "c", "d"))
   alg.addReplica("a")
   alg.addReplica("b")
   alg.addReplica("c")
+  alg.addReplica("d")
 }
