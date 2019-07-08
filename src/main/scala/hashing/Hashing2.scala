@@ -2,7 +2,7 @@ package hashing
 
 import java.nio.ByteBuffer
 import java.util
-import java.util.concurrent.ConcurrentSkipListSet
+import java.util.concurrent.{ConcurrentSkipListMap, ConcurrentSkipListSet}
 
 import com.twitter.algebird.CassandraMurmurHash
 
@@ -89,7 +89,7 @@ object Hashing2 {
     override val seed          = 512L
     override val name          = "consistent-hashing"
 
-    private val ring: JSortedMap[Long, Node] = new JTreeMap[Long, Node]()
+    private val ring: JSortedMap[Long, Node] = new ConcurrentSkipListMap[Long, Node]()
 
     private def writeInt(arr: Array[Byte], i: Int, offset: Int): Array[Byte] = {
       arr(offset) = (i >>> 24).toByte

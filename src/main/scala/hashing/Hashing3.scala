@@ -2,7 +2,7 @@ package hashing
 
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets.UTF_8
-import java.util.concurrent.ConcurrentSkipListSet
+import java.util.concurrent.{ConcurrentSkipListMap, ConcurrentSkipListSet}
 
 import com.twitter.algebird.CassandraMurmurHash
 
@@ -23,9 +23,9 @@ object Hashing3 {
 
     def toBinary(node: T): Array[Byte]
 
-    def removeReplica(node: T): Boolean
+    def remove(node: T): Boolean
 
-    def addReplica(node: T): Boolean
+    def add(node: T): Boolean
 
     def replicaFor(key: String, rf: Int): Set[T]
 
@@ -38,7 +38,7 @@ object Hashing3 {
     private val seed           = 512L
 
     private var replicas: Set[T]          = Set.empty[T]
-    private val ring: JSortedMap[Long, T] = new JTreeMap[Long, T]()
+    private val ring: JSortedMap[Long, T] = new ConcurrentSkipListMap[Long, T]()
 
     private def writeInt(arr: Array[Byte], i: Int, offset: Int): Array[Byte] = {
       arr(offset) = (i >>> 24).toByte
@@ -48,7 +48,7 @@ object Hashing3 {
       arr
     }
 
-    override def removeReplica(replica: T): Boolean = {
+    override def remove(replica: T): Boolean = {
       //println(s"remove $node")
       replicas = replicas - replica
       (0 to numberOfVNodes).foldLeft(true) { (acc, vNodeId) ⇒
@@ -61,7 +61,7 @@ object Hashing3 {
       }
     }
 
-    override def addReplica(replica: T): Boolean = {
+    override def add(replica: T): Boolean = {
       //Hash each node several times (VNodes)
       replicas = replicas + replica
       (0 to numberOfVNodes).foldLeft(true) { (acc, i) ⇒
@@ -106,10 +106,10 @@ object Hashing3 {
     private val seed = 512L
     private val ring = new ConcurrentSkipListSet[T]()
 
-    override def removeReplica(replica: T): Boolean =
+    override def remove(replica: T): Boolean =
       ring.remove(replica)
 
-    override def addReplica(replica: T): Boolean =
+    override def add(replica: T): Boolean =
       ring.add(replica)
 
     override def replicaFor(key: String, rf: Int): Set[T] = {
@@ -154,7 +154,7 @@ object Hashing3 {
     implicit object a extends HashBuilder[ConsistentForStrings] {
       override def replicas(replicas: Set[String]): Consistent[String] = new Consistent[String] {
 
-        replicas.foreach(addReplica(_))
+        replicas.foreach(add(_))
 
         override val name: String = "consistent-hashing for string"
 
@@ -166,7 +166,7 @@ object Hashing3 {
     implicit object b extends HashBuilder[ConsistentForLongs] {
       override def replicas(replicas: Set[Long]): Consistent[Long] = new Consistent[Long] {
 
-        replicas.foreach(addReplica(_))
+        replicas.foreach(add(_))
 
         override val name: String = "consistent-hashing for longs"
 
@@ -178,7 +178,7 @@ object Hashing3 {
     implicit object c extends HashBuilder[RendezvousForStrings] {
       override def replicas(replicas: Set[String]): Rendezvous[String] = new Rendezvous[String] {
 
-        replicas.foreach(addReplica(_))
+        replicas.foreach(add(_))
 
         override val name: String = "rendezvous for string"
         override def toBinary(node: String): Array[Byte] =
@@ -193,8 +193,8 @@ object Hashing3 {
   HashBuilder[ConsistentForStrings].replicas(Set("a", "b", "c", "d"))
 
   val alg = HashBuilder[RendezvousForStrings].replicas(Set("a", "b", "c", "d"))
-  alg.addReplica("a")
-  alg.addReplica("b")
-  alg.addReplica("c")
-  alg.addReplica("d")
+  alg.add("a")
+  alg.add("b")
+  alg.add("c")
+  alg.add("d")
 }
