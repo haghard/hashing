@@ -124,11 +124,11 @@ object CompareHashing2 {
     iter0(akka.routing.ConsistentHash[String](getNodes(consistentHistAkka).asScala, 4), consistentHistAkka)
 
     //com.github.ssedano.hash.JumpConsistentHash.jumpConsistentHash(67l, 5)
-
-    /*val ch0 = com.ctheu.ch.ConsistentHashing(replicaCount = 2).withNodes(nodes0.map(com.ctheu.ch.Node(_)) :_*)
+    /*
+    val ch0 = com.ctheu.ch.ConsistentHashing(replicaCount = 2).withNodes(nodes0.map(com.ctheu.ch.Node(_)): _*)
     ch0.replicaCount == 3
     ch0.nodeCount == nodes.size
-    ch0.lookup("a")*/
+    ch0.lookup("a") */
 
     val latency = System.currentTimeMillis - start
     println("==============")

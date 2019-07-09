@@ -8,8 +8,7 @@ import com.twitter.algebird.CassandraMurmurHash
 
 import scala.annotation.implicitNotFound
 import scala.collection.immutable.SortedSet
-import scala.collection.JavaConverters._
-import java.util.{SortedMap ⇒ JSortedMap, TreeMap ⇒ JTreeMap}
+import java.util.{SortedMap ⇒ JSortedMap}
 
 object Hashing3 {
 
@@ -27,14 +26,13 @@ object Hashing3 {
 
     def add(node: T): Boolean
 
-    def replicaFor(key: String, rf: Int): Set[T]
+    def memberFor(key: String, rf: Int): Set[T]
 
     def numOfReplicas: Int
   }
 
   trait Consistent[T] extends HashAlg[T] {
-
-    private val numberOfVNodes = 4
+    private val numberOfVNodes = 1 << 5
     private val seed           = 512L
 
     private var replicas: Set[T]          = Set.empty[T]
@@ -73,21 +71,47 @@ object Hashing3 {
       }
     }
 
-    override def replicaFor(key: String, rf: Int): Set[T] = {
-      if (rf > ring.keySet.size)
-        throw new Exception("Replication factor more than the number of the ranges on a ring")
+    override def memberFor(key: String, rf: Int): Set[T] = {
+      val localRing = ring
+      if (rf > localRing.keySet.size / numberOfVNodes)
+        throw new Exception("Replication factor more than the number of the ranges in the ring")
 
-      val bytes         = key.getBytes(UTF_8)
-      val keyHash128bit = CassandraMurmurHash.hash3_x64_128(ByteBuffer.wrap(bytes), 0, bytes.length, seed)(1)
-      if (ring.containsKey(keyHash128bit)) {
-        ring.keySet.asScala.take(rf).map(ring.get).to[scala.collection.immutable.Set]
+      val keyBytes = key.getBytes(UTF_8)
+      val keyHash  = CassandraMurmurHash.hash3_x64_128(ByteBuffer.wrap(keyBytes), 0, keyBytes.length, seed)(1)
+
+      var i    = 0
+      var res  = Set.empty[T]
+      val tail = localRing.tailMap(keyHash).values
+      val all  = localRing.values
+
+      val it = tail.iterator
+      if (tail.size >= rf) {
+        val it = tail.iterator
+        while (it.hasNext && i < rf) {
+          val n = it.next
+          if (!res.contains(n)) {
+            i += 1
+            res = res + n
+          }
+        }
+        res
       } else {
-        val tailMap    = ring.tailMap(keyHash128bit)
-        val candidates = tailMap.keySet.asScala.take(rf).map(ring.get).to[scala.collection.immutable.Set]
-        if (candidates.size < rf) {
-          //we must be at the end of the ring so we go to the first entry and so on
-          candidates ++ ring.keySet.asScala.take(rf - candidates.size).map(ring.get).to[scala.collection.immutable.Set]
-        } else candidates
+        while (it.hasNext) {
+          val n = it.next
+          if (!res.contains(n)) {
+            i += 1
+            res = res + n
+          }
+        }
+        val it0 = all.iterator
+        while (it0.hasNext && i < rf) {
+          val n = it0.next
+          if (!res.contains(n)) {
+            i += 1
+            res = res + n
+          }
+        }
+        res
       }
     }
 
@@ -112,7 +136,7 @@ object Hashing3 {
     override def add(replica: T): Boolean =
       ring.add(replica)
 
-    override def replicaFor(key: String, rf: Int): Set[T] = {
+    override def memberFor(key: String, rf: Int): Set[T] = {
       var candidates = SortedSet.empty[(Long, T)]((x: (Long, T), y: (Long, T)) ⇒ -x._1.compare(y._1))
       val iter       = ring.iterator
       while (iter.hasNext) {

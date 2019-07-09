@@ -130,20 +130,46 @@ object Hashing2 {
       } else false
 
     override def nodeFor(key: String, rf: Int): Set[Node] = {
-      if (rf > ring.keySet.size)
-        throw new Exception("Replication factor more than the number of the ranges on a ring")
+      val localRing = ring
+      if (rf > localRing.keySet.size / numberOfVNodes)
+        throw new Exception("Replication factor more than the number of the ranges in the ring")
 
-      val bytes         = key.getBytes(UTF_8)
-      val keyHash128bit = CassandraMurmurHash.hash3_x64_128(ByteBuffer.wrap(bytes), 0, bytes.length, seed)(1)
-      if (ring.containsKey(keyHash128bit)) {
-        ring.keySet.asScala.take(rf).map(ring.get).to[scala.collection.immutable.Set]
+      val keyBytes = key.getBytes(UTF_8)
+      val keyHash  = CassandraMurmurHash.hash3_x64_128(ByteBuffer.wrap(keyBytes), 0, keyBytes.length, seed)(1)
+
+      var i    = 0
+      var res  = Set.empty[Node]
+      val tail = localRing.tailMap(keyHash).values
+      val all  = localRing.values
+
+      val it = tail.iterator
+      if (tail.size >= rf) {
+        val it = tail.iterator
+        while (it.hasNext && i < rf) {
+          val n = it.next
+          if (!res.contains(n)) {
+            i += 1
+            res = res + n
+          }
+        }
+        res
       } else {
-        val tailMap    = ring.tailMap(keyHash128bit)
-        val candidates = tailMap.keySet.asScala.take(rf).map(ring.get).to[scala.collection.immutable.Set]
-        if (candidates.size < rf) {
-          //we must be at the end of the ring so we go to the first entry and so on
-          candidates ++ ring.keySet.asScala.take(rf - candidates.size).map(ring.get).to[scala.collection.immutable.Set]
-        } else candidates
+        while (it.hasNext) {
+          val n = it.next
+          if (!res.contains(n)) {
+            i += 1
+            res = res + n
+          }
+        }
+        val it0 = all.iterator
+        while (it0.hasNext && i < rf) {
+          val n = it0.next
+          if (!res.contains(n)) {
+            i += 1
+            res = res + n
+          }
+        }
+        res
       }
     }
 
@@ -166,11 +192,11 @@ object Hashing2 {
     }
 
     override def toString: String = {
-      val iter = ring.keySet.iterator
       val sb   = new StringBuilder
+      val iter = ring.entrySet.iterator
       while (iter.hasNext) {
-        val key = iter.next
-        sb.append(s"[${key}: ${ring.get(key)}]").append("->")
+        val n = iter.next
+        sb.append(s"[${n.getValue}: ${n.getKey}]").append("->")
       }
       sb.toString
     }
