@@ -28,7 +28,7 @@ object Dependencies {
     val intervalset = "com.rklaehn" %% "intervalset" % "0.2.0"
 
     //test:run
-    val ammonite = ("com.lihaoyi" % "ammonite" % "1.6.8" % "test").cross(CrossVersion.full)
+    val ammonite = ("com.lihaoyi" % "ammonite" % "1.6.9" % "test").cross(CrossVersion.full)
 
     val jumpCH = "testanythinghere" %% "testanythinghere" % "0.1"
 
