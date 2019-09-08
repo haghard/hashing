@@ -8,7 +8,7 @@ import com.twitter.algebird.CassandraMurmurHash
 
 import scala.collection.immutable.SortedSet
 import scala.reflect.ClassTag
-import java.nio.charset.StandardCharsets._
+import java.nio.charset.StandardCharsets.UTF_8
 
 object Hashing2 {
 
@@ -64,8 +64,8 @@ object Hashing2 {
         val node           = iter.next
         val keyBytes       = key.getBytes(UTF_8)
         val nodeBytes      = toBinary(node)
-        val byteBuffer     = ByteBuffer.allocate(keyBytes.length + nodeBytes.length).put(keyBytes).put(nodeBytes)
-        val nodeHash128bit = CassandraMurmurHash.hash3_x64_128(byteBuffer, 0, byteBuffer.array.length, seed)(1)
+        val keyAndNode     = ByteBuffer.allocate(keyBytes.length + nodeBytes.length).put(keyBytes).put(nodeBytes)
+        val nodeHash128bit = CassandraMurmurHash.hash3_x64_128(keyAndNode, 0, keyAndNode.array.length, seed)(1)
         candidates = candidates + (nodeHash128bit → node)
       }
       candidates.take(rf).map(_._2)
@@ -90,6 +90,7 @@ object Hashing2 {
     override val name          = "consistent-hashing"
 
     private val ring: JSortedMap[Long, Node] = new ConcurrentSkipListMap[Long, Node]()
+    //new JTreeMap[Long, Node]()
 
     private def writeInt(arr: Array[Byte], i: Int, offset: Int): Array[Byte] = {
       arr(offset) = (i >>> 24).toByte
@@ -137,40 +138,10 @@ object Hashing2 {
       val keyBytes = key.getBytes(UTF_8)
       val keyHash  = CassandraMurmurHash.hash3_x64_128(ByteBuffer.wrap(keyBytes), 0, keyBytes.length, seed)(1)
 
-      var i    = 0
-      var res  = Set.empty[Node]
-      val tail = localRing.tailMap(keyHash).values
-      val all  = localRing.values
-
-      val it = tail.iterator
-      if (tail.size >= rf) {
-        val it = tail.iterator
-        while (it.hasNext && i < rf) {
-          val n = it.next
-          if (!res.contains(n)) {
-            i += 1
-            res = res + n
-          }
-        }
-        res
-      } else {
-        while (it.hasNext) {
-          val n = it.next
-          if (!res.contains(n)) {
-            i += 1
-            res = res + n
-          }
-        }
-        val it0 = all.iterator
-        while (it0.hasNext && i < rf) {
-          val n = it0.next
-          if (!res.contains(n)) {
-            i += 1
-            res = res + n
-          }
-        }
-        res
-      }
+      val r             = localRing.tailMap(keyHash)
+      val tillEnd       = r.values.asScala
+      val fromBeginning = localRing.subMap(ring.firstKey, r.firstKey).values.asScala
+      (tillEnd ++ fromBeginning).take(Math.min(rf, ring.size)).toSet
     }
 
     def showDiff: String = {
@@ -253,15 +224,15 @@ object Hashing2 {
   }*/
 
   object Consistent {
-    implicit def instance = new Consistent[String] {
-      override def toBinary(node: String): Array[Byte] = node.getBytes("UTF-8")
+    implicit def instance: Consistent[String] = new Consistent[String] {
+      override def toBinary(node: String): Array[Byte] = node.getBytes(UTF_8)
       override def validated(node: String): Boolean    = true
     }
   }
 
   object Rendezvous {
-    implicit def instance = new Rendezvous[String] {
-      override def toBinary(node: String): Array[Byte] = node.getBytes("UTF-8")
+    implicit def instance: Rendezvous[String] = new Rendezvous[String] {
+      override def toBinary(node: String): Array[Byte] = node.getBytes(UTF_8)
       override def validated(node: String): Boolean    = true
     }
 
@@ -281,11 +252,11 @@ object Hashing2 {
   object HashingRouter {
 
     //HashingRouter.create2[Consistent, String]
-    def create2[F[_], A: ClassTag](implicit tag: ClassTag[A], hashAlg: F[A]): F[A] =
+    def create2[A, F[_]](implicit tag: ClassTag[A], hashAlg: F[A]): F[A] =
       hashAlg
 
     //HashingRouter.create[String, Consistent]
-    def create[A: ClassTag, F[A] <: Hashing[A]](implicit tag: ClassTag[A], hashAlg: F[A]): F[A] =
+    def create[A, F[A] <: Hashing[A]](implicit tag: ClassTag[A], hashAlg: F[A]): F[A] =
       //println(tag.runtimeClass.getName)
       //println(hashAlg.getClass.getName)
       hashAlg

@@ -9,6 +9,7 @@ import com.twitter.algebird.CassandraMurmurHash
 import scala.annotation.implicitNotFound
 import scala.collection.immutable.SortedSet
 import java.util.{SortedMap ⇒ JSortedMap}
+import scala.collection.JavaConverters._
 
 object Hashing3 {
 
@@ -79,11 +80,14 @@ object Hashing3 {
       val keyBytes = key.getBytes(UTF_8)
       val keyHash  = CassandraMurmurHash.hash3_x64_128(ByteBuffer.wrap(keyBytes), 0, keyBytes.length, seed)(1)
 
+      val r             = localRing.tailMap(keyHash)
+      val tillEnd       = r.values.asScala
+      val fromBeginning = localRing.subMap(ring.firstKey, r.firstKey).values.asScala
+      (tillEnd ++ fromBeginning).take(Math.min(rf, ring.size)).toSet
+
+      /*
       var i    = 0
       var res  = Set.empty[T]
-      val tail = localRing.tailMap(keyHash).values
-      val all  = localRing.values
-
       val it = tail.iterator
       if (tail.size >= rf) {
         val it = tail.iterator
@@ -112,7 +116,7 @@ object Hashing3 {
           }
         }
         res
-      }
+      }*/
     }
 
     override def numOfReplicas: Int = replicas.size

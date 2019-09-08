@@ -71,7 +71,7 @@ object CompareHashing2 {
     }
   }
 
-  def iterR(ring: Ring, distribution: Map[String, AtomicInteger]) = {
+  def iterR(ring: HashRing, distribution: Map[String, AtomicInteger]) = {
     (0 until iterNum).foreach { _ ⇒
       val key     = line(10).getBytes
       val keyHash = CassandraHash.hash3_x64_128(ByteBuffer.wrap(key), 0, key.length, 512L)(1)
@@ -147,7 +147,6 @@ object CompareHashing2 {
     println("======: ConsistentHash :========")
     val consistentHist: Map[String, AtomicInteger] = new util.LinkedHashMap[String, AtomicInteger]()
     val ch                                         = Consistent[String].withNodes(getNodes(consistentHist))
-    //println(ch.asInstanceOf[Consistent[String]].showDiff)
     iter(ch, consistentHist)
 
     println("======: RendezvousHashing :========")
@@ -159,14 +158,14 @@ object CompareHashing2 {
     val consistentHistAkka: Map[String, AtomicInteger] = new util.LinkedHashMap[String, AtomicInteger]()
     iter0(akka.routing.ConsistentHash[String](getNodes(consistentHistAkka).asScala, 4), consistentHistAkka)
 
-    println("======: Ring :========")
+    /*println("======: HashRing :========")
     val ringHist: Map[String, AtomicInteger] = new util.LinkedHashMap[String, AtomicInteger]()
     val list                                 = getNodes(ringHist).asScala
-    val ring = list.foldLeft(Ring(list.head)) { (ring, c) ⇒
+    val ring = list.foldLeft(HashRing(list.head)) { (ring, c) ⇒
       val (r, _) = ring.:+(c).getOrElse((ring, Set.empty))
       r
     }
-    iterR(ring, ringHist)
+    iterR(ring, ringHist)*/
 
     //com.github.ssedano.hash.JumpConsistentHash.jumpConsistentHash(67l, 5)
 

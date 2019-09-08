@@ -2,12 +2,12 @@ package hashing
 
 import scala.collection.immutable.SortedMap
 
-case class Ring(private val ring: SortedMap[Long, String], start: Long, end: Long, step: Long) {
+case class HashRing(private val ring: SortedMap[Long, String], start: Long, end: Long, step: Long) {
 
   /**
     * Alias for [[add]] method
     */
-  def :+(node: String): Option[(Ring, Set[(Long, String)])] =
+  def :+(node: String): Option[(HashRing, Set[(Long, String)])] =
     add(node)
 
   /**
@@ -17,7 +17,7 @@ case class Ring(private val ring: SortedMap[Long, String], start: Long, end: Lon
     *
     * When we add new node, it changes the ownership of some ranges by splitting it up.
     */
-  def add(node: String): Option[(Ring, Set[(Long, String)])] =
+  def add(node: String): Option[(HashRing, Set[(Long, String)])] =
     if (nodes.contains(node))
       None
     else {
@@ -31,16 +31,16 @@ case class Ring(private val ring: SortedMap[Long, String], start: Long, end: Lon
         case (acc, (pId, _)) ⇒ acc.updated(pId, node)
       }
 
-      Option((Ring(updatedRing, start, end, step) → takeOvers))
+      Option(HashRing(updatedRing, start, end, step) → takeOvers)
     }
 
   /**
     * Alias for [[remove]] method
     */
-  def :-(node: String): Option[Ring] =
+  def :-(node: String): Option[HashRing] =
     remove(node)
 
-  def remove(node: String): Option[Ring] =
+  def remove(node: String): Option[HashRing] =
     if (!nodes.contains(node))
       None
     else {
@@ -53,7 +53,7 @@ case class Ring(private val ring: SortedMap[Long, String], start: Long, end: Lon
           else ring - (list(0), list(1), list.splitAt(2)._2: _*)
       }
 
-      Some(Ring(m, start, end, step))
+      Some(HashRing(m, start, end, step))
     }
 
   def lookup(hash: Long, rf: Int = 1): Vector[String] =
@@ -96,15 +96,15 @@ case class Ring(private val ring: SortedMap[Long, String], start: Long, end: Lon
   }
 }
 
-object Ring {
+object HashRing {
 
   def apply(
     name: String,
     start: Long = Long.MinValue,
     end: Long = Long.MaxValue,
     step: Long = 6917529027641080L //2667 partitions, change  if you need more
-  ): Ring =
-    Ring(
+  ): HashRing =
+    HashRing(
       (start until end by step)
         .foldLeft(SortedMap[Long, String]()) { (acc, c) ⇒
           acc + (c → name)
