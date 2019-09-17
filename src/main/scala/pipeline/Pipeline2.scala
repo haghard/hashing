@@ -4,6 +4,9 @@ object Pipeline2 {
 
   import cats.Functor
   import cats.instances.option._
+  import shapeless._
+
+  type Payload = shapeless.:+:[Option[Unit], shapeless.:+:[Option[Unit],  shapeless.:+:[Option[Unit], shapeless.:+:[Unit,shapeless.CNil]]]]
 
   object implicits {
     import shapeless._
@@ -48,25 +51,19 @@ object Pipeline2 {
   trait Source[F[_], In] extends (String ⇒ F[In])
 
   object Source {
-    def apply[F[_], In](f: String ⇒ F[In]) = new Source[F, In] {
-      override def apply(v: String): F[In] = f(v)
-    }
+    def apply[F[_], In](f: String ⇒ F[In]): Source[F, In] = (v: String) ⇒ f(v)
   }
 
   trait Transformation[In, Out] extends (In ⇒ Out)
 
   object Transformation {
-    def apply[In, Out](f: In ⇒ Out) = new Transformation[In, Out] {
-      override def apply(v: In): Out = f(v)
-    }
+    def apply[In, Out](f: In ⇒ Out): Transformation[In, Out] = (v: In) ⇒ f(v)
   }
 
   trait Sink[Out] extends (Out ⇒ Unit)
 
   object Sink {
-    def apply[Out](f: Out ⇒ Unit) = new Sink[Out] {
-      override def apply(v: Out): Unit = f(v)
-    }
+    def apply[Out](f: Out ⇒ Unit): Sink[Out] = (v: Out) ⇒ f(v)
   }
 
   sealed trait Flow[-T, A, B] {
@@ -110,39 +107,79 @@ object Pipeline2 {
     implicit val b = new Algorithm[Two]   { override val name = "two"    }
     implicit val c = new Algorithm[Three] { override val name = "lenght" }
 
-    implicit val src = Source[Option, Int] { (line: String) ⇒
+    implicit val src = Source[Option, Int] { line: String ⇒
       Option(line.length)
     }
-    implicit val map = Transformation { (v: Int) ⇒
+
+    implicit val srcD = Source[Option, Double] { line: String ⇒
+      Option(java.lang.Double.parseDouble(line))
+    }
+
+    implicit val map = Transformation { v: Int ⇒
       v * -1
     }
-    implicit val consoleSink = Sink[Int] { (v: Int) ⇒
+
+    implicit val mapD = Transformation { v: Double ⇒
+      v * -1
+    }
+
+    implicit val consoleSink = Sink[Int] { v: Int ⇒
       println(s"out > $v")
     }
+
+    implicit val consoleSinkD = Sink[Double] { v: Double ⇒
+      println(s"out > $v")
+    }
+
   }
 
   import implicits._
 
-  def blockA: Flow.Aux[One, Int, Int, Either[Unit, Option[Unit]]] = {
+  def opOne: Flow.Aux[One, Int, Int, Either[Unit, Option[Unit]]] = {
     import allImplicits._
     Flow[One, Option, Int, Int]
   }
 
-  def blockB: Flow.Aux[Two, Int, Int, Either[Unit, Option[Unit]]] = {
+  /*def blockA0: Flow.Aux[One, Double, Double, Either[Unit, Option[Unit]]] = {
+    import allImplicits._
+    Flow[One, Option, Double, Double]
+  }*/
+
+  def opTwo: Flow.Aux[Two, Int, Int, Either[Unit, Option[Unit]]] = {
     import allImplicits._
     Flow[Two, Option, Int, Int]
   }
 
-  def blockC: Flow.Aux[Three, Int, Int, Either[Unit, Option[Unit]]] = {
+  def opLenght: Flow.Aux[Three, Int, Int, Either[Unit, Option[Unit]]] = {
     import allImplicits._
     Flow[Three, Option, Int, Int]
   }
 
-  val chain = blockA +: blockB +: blockC +: PNil
+  //doesn't work
+  /*def parseClassName(env: PayloadType): String =
+    (env.select[Option[Unit]] ++ env.select[Option[Unit]] ++ env.select[Option[Unit]] ++
+    env.select[Unit]).iterator.next.getClass.getSimpleName*/
+
+  def parse(env: Payload): String =
+    env match {
+      case Inl(_) ⇒
+          "one"
+        case Inr(Inl(_)) ⇒
+          "two"
+        case Inr(Inr(Inl(_))) ⇒
+          "lenght"
+        case Inr(Inr(Inr(Inl(_)))) ⇒
+          "unknown"
+    }
+
+  val chain = opOne +: opTwo +: opLenght +: PNil
 
   val failure = chain("aaa")
   println("*******************")
-  val success0 = chain("two")
+
+  val success0: Payload = chain("lenght")
+  parse(success0)
+
   println("*******************")
   val success1 = chain("lenght")
   println("*******************")
