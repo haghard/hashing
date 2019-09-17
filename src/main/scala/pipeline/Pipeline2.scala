@@ -11,10 +11,8 @@ object Pipeline2 {
   import cats.instances.option._
   import shapeless._
 
-  type Payload[F[_]] = shapeless.:+:[F[Unit], shapeless.:+:[
-    F[Unit],
-    shapeless.:+:[F[Unit], shapeless.:+:[Unit, shapeless.CNil]]
-  ]]
+  type Payload[F[_], T] =
+    shapeless.:+:[F[T], shapeless.:+:[F[T], shapeless.:+:[F[T], shapeless.:+:[Unit, shapeless.CNil]]]]
 
   object implicits {
     import shapeless._
@@ -27,11 +25,11 @@ object Pipeline2 {
       }
 
     implicit def inductivePipeline[TH, F[_], AH, BH, TT <: Coproduct, AT <: Coproduct, BT <: Coproduct, OT <: Coproduct](
-      implicit head: Flow.Aux[TH, AH, BH, Flow.Out[F]],
+      implicit head: Flow.Aux[TH, AH, BH, Flow.Out[F, BH]],
       tail: Flow.Aux[TT, AT, BT, OT]
-    ): Flow.Aux[TH :+: TT, AH :+: AT, BH :+: BT, F[Unit] :+: OT] =
+    ): Flow.Aux[TH :+: TT, AH :+: AT, BH :+: BT, F[BH] :+: OT] =
       new Flow[TH :+: TT, AH :+: AT, BH :+: BT] {
-        final override type Out = F[Unit] :+: OT
+        final override type Out = F[BH] :+: OT
         final override def apply(alg: String, payload: String): Out =
           head(alg, payload).fold({ _ ⇒
             Inr(tail(alg, payload))
@@ -42,15 +40,14 @@ object Pipeline2 {
       val tail: Flow.Aux[TT, AT, BT, OT]
     ) extends AnyVal {
       def +:[TH, F[_], AH, BH](
-        head: Flow.Aux[TH, AH, BH, Flow.Out[F]]
-      ): Flow.Aux[TH :+: TT, AH :+: AT, BH :+: BT, F[Unit] :+: OT] =
+        head: Flow.Aux[TH, AH, BH, Flow.Out[F, BH]]
+      ): Flow.Aux[TH :+: TT, AH :+: AT, BH :+: BT, F[BH] :+: OT] =
         inductivePipeline[TH, F, AH, BH, TT, AT, BT, OT](head, tail)
     }
   }
 
-  //- Given an ordered extensional set of Pipelines
+  //- Given an ordered extensional set of pipelines
   //- Produced a computation that is *at most 1* Pipeline
-  //- Given a Product, Produce a Coproduct and an Output type
 
   trait Algorithm[-T] {
     def name: String
@@ -80,8 +77,12 @@ object Pipeline2 {
   }
 
   object Flow {
-    type Out[F[_]]              = Either[Unit, F[Unit]]
-    type Default[T, F[_], A, B] = Aux[T, A, B, Out[F]]
+    //type Out[F[_]]              = Either[Unit, F[Unit]]
+    //type Default[T, F[_], A, B] = Aux[T, A, B, Out[F]]
+    //type Aux[T, A, B, O] = Flow[T, A, B] { type Out = O }
+
+    type Out[F[_], B]           = Either[Unit, F[B]]
+    type Default[T, F[_], A, B] = Aux[T, A, B, Either[Unit, F[B]]]
     type Aux[T, A, B, O]        = Flow[T, A, B] { type Out = O }
 
     final def apply[T: Algorithm, F[_]: Functor, A, B](
@@ -92,7 +93,7 @@ object Pipeline2 {
       val G: Algorithm[T] = implicitly
       val F: Functor[F]   = implicitly
       new Flow[T, A, B] {
-        final override type Out = Flow.Out[F]
+        final override type Out = Flow.Out[F, B]
         override def apply(alg: String, payload: String): Out = {
           val b = G.name == alg
           println(s"$alg matches(${G.name}) = $b")
@@ -100,7 +101,8 @@ object Pipeline2 {
             val in: F[A]       = src(payload)
             val computed: F[B] = F.map(in)(T)
             val r: F[Unit]     = F.map(computed)(sink)
-            r
+            //r
+            computed
           } else Left(())
         }
       }
@@ -136,69 +138,56 @@ object Pipeline2 {
 
   import implicits._
 
-  def opOne: Flow.Aux[One, Int, Int, Either[Unit, Option[Unit]]] = {
+  def opOne: Flow.Aux[One, Int, Int, Either[Unit, Option[Int]]] = {
     import allImplicits._
     Flow[One, Option, Int, Int]
   }
 
-  def opTwo: Flow.Aux[Two, Int, Int, Either[Unit, Option[Unit]]] = {
+  def opTwo: Flow.Aux[Two, Int, Int, Either[Unit, Option[Int]]] = {
     import allImplicits._
     Flow[Two, Option, Int, Int]
   }
 
-  def opThree: Flow.Aux[Three, Int, Int, Either[Unit, Option[Unit]]] = {
+  def opThree: Flow.Aux[Three, Int, Int, Either[Unit, Option[Int]]] = {
     import allImplicits._
     Flow[Three, Option, Int, Int]
   }
 
-  def opOne0: Flow.Aux[One, Int, Int, Either[Unit, cats.Id[Unit]]] = {
+  def opOne0: Flow.Aux[One, Int, Int, Either[Unit, cats.Id[Int]]] = {
     import allImplicits._
     Flow[One, cats.Id, Int, Int]
   }
 
-  def opTwo0: Flow.Aux[Two, Int, Int, Either[Unit, cats.Id[Unit]]] = {
+  def opTwo0: Flow.Aux[Two, Int, Int, Either[Unit, cats.Id[Int]]] = {
     import allImplicits._
     Flow[Two, cats.Id, Int, Int]
   }
 
-  def opThree0: Flow.Aux[Three, Int, Int, Either[Unit, cats.Id[Unit]]] = {
+  def opThree0: Flow.Aux[Three, Int, Int, Either[Unit, cats.Id[Int]]] = {
     import allImplicits._
     Flow[Three, cats.Id, Int, Int]
   }
 
-  //doesn't work
-  /*def parseClassName(env: PayloadType): String =
-    (env.select[Option[Unit]] ++ env.select[Option[Unit]] ++ env.select[Option[Unit]] ++
-    env.select[Unit]).iterator.next.getClass.getSimpleName*/
-
-  def parse[F[_]](env: Payload[F]): String =
+  def parseCoP[F[_], T](env: Payload[F, T]): (String, F[T]) =
     env match {
-      case Inl(_) ⇒
-        allImplicits.a.name
-      case Inr(Inl(_)) ⇒
-        allImplicits.b.name
-      case Inr(Inr(Inl(_))) ⇒
-        allImplicits.c.name
+      case Inl(r) ⇒
+        (allImplicits.a.name, r)
+      case Inr(Inl(r)) ⇒
+        (allImplicits.b.name, r)
+      case Inr(Inr(Inl(r))) ⇒
+        (allImplicits.c.name, r)
       case Inr(Inr(Inr(Inl(_)))) ⇒
-        "unknown"
+        ("unknown", null.asInstanceOf[F[T]])
       case Inr(Inr(Inr(Inr(_)))) ⇒
-        "unknown"
+        ("unknown", null.asInstanceOf[F[T]])
     }
 
   def main(args: Array[String]): Unit = {
+    //val pipeline = opOne0 +: opTwo0 +: opThree0 +: PNil
+    val pipeline = opOne +: opTwo +: opThree +: PNil
 
-    val chain = opOne +: opTwo +: opThree +: PNil
-
-    //val chain = opOne0 +: opTwo0 +: opThree0 +: PNil
-
-    //Payload[cats.Id]
-    val success = chain(allImplicits.b.name, "00000")
-    parse(success)
-
-    /*
-    println("*******************")
-    val success1 = chain("lenght")
-    println("*******************")
-   */
+    val out = pipeline(allImplicits.c.name, "000000")
+    val parseOut     = parseCoP(out)
+    println(out + " : " + parseOut)
   }
 }
