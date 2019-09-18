@@ -81,9 +81,9 @@ object Pipeline2 {
     //type Default[T, F[_], A, B] = Aux[T, A, B, Out[F]]
     //type Aux[T, A, B, O] = Flow[T, A, B] { type Out = O }
 
-    type Out[F[_], B]           = Either[Unit, F[B]]
-    type Default[T, F[_], A, B] = Aux[T, A, B, Either[Unit, F[B]]]
+    type Out[F[_], T]           = Either[Unit, F[T]]
     type Aux[T, A, B, O]        = Flow[T, A, B] { type Out = O }
+    type Default[T, F[_], A, B] = Aux[T, A, B, Either[Unit, F[B]]]
 
     final def apply[T: Algorithm, F[_]: Functor, A, B](
       implicit src: Source[F, A],
@@ -98,8 +98,8 @@ object Pipeline2 {
           val b = G.name == alg
           println(s"$alg matches(${G.name}) = $b")
           if (b) Right {
-            val in: F[A]       = src(payload)
-            val computed: F[B] = F.map(in)(T)
+            val input: F[A]    = src(payload)
+            val computed: F[B] = F.map(input)(T)
             val r: F[Unit]     = F.map(computed)(sink)
             //r
             computed
@@ -186,8 +186,8 @@ object Pipeline2 {
     //val pipeline = opOne0 +: opTwo0 +: opThree0 +: PNil
     val pipeline = opOne +: opTwo +: opThree +: PNil
 
-    val out = pipeline(allImplicits.c.name, "000000")
-    val parseOut     = parseCoP(out)
+    val out      = pipeline(allImplicits.c.name, "000000")
+    val parseOut = parseCoP(out)
     println(out + " : " + parseOut)
   }
 }
