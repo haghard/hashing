@@ -1,7 +1,7 @@
 import sbt._
 
 object Dependencies {
-  val akkaVersion = "2.5.23"
+  val akkaVersion = "2.5.26"
 
   object Compile {
     //val hasher = "com.roundeights" %% "hasher" % "1.2.0"
@@ -28,7 +28,7 @@ object Dependencies {
     val intervalset = "com.rklaehn" %% "intervalset" % "0.2.0"
 
     //test:run
-    val ammonite = ("com.lihaoyi" % "ammonite" % "1.6.9" % "test").cross(CrossVersion.full)
+    val ammonite = ("com.lihaoyi" % "ammonite" % "1.9.2" % "test").cross(CrossVersion.full)
 
     val jumpCH = "testanythinghere" %% "testanythinghere" % "0.1"
 
@@ -38,7 +38,7 @@ object Dependencies {
 
   object Test {
     //val akkaTestkit = "com.typesafe.akka" %% "akka-testkit" % akkaVersion % "test"
-    val scalatest = "org.scalatest" %% "scalatest" % "3.0.8" % "test"
+    val scalatest = "org.scalatest" %% "scalatest" % "3.1.1" % "test"
     val all = Seq(scalatest)
   }
 

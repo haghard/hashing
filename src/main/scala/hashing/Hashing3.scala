@@ -4,7 +4,7 @@ import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets.UTF_8
 import java.util.concurrent.{ConcurrentSkipListMap, ConcurrentSkipListSet}
 
-import com.twitter.algebird.CassandraMurmurHash
+//import com.twitter.algebird.CassandraMurmurHash
 
 import scala.annotation.implicitNotFound
 import scala.collection.immutable.SortedSet
@@ -54,7 +54,7 @@ object Hashing3 {
         val vNodeSuffix = Array.ofDim[Byte](4)
         writeInt(vNodeSuffix, vNodeId, 0)
         val bytes          = toBinary(replica) ++ vNodeSuffix
-        val nodeHash128bit = CassandraMurmurHash.hash3_x64_128(ByteBuffer.wrap(bytes), 0, bytes.length, seed)(1)
+        val nodeHash128bit = CassandraHash.hash3_x64_128(ByteBuffer.wrap(bytes), 0, bytes.length, seed)(1)
         //println(s"$node - vnode:$vNodeId")
         acc & replica == ring.remove(nodeHash128bit)
       }
@@ -67,7 +67,7 @@ object Hashing3 {
         val suffix = Array.ofDim[Byte](4)
         writeInt(suffix, i, 0)
         val bytes          = toBinary(replica) ++ suffix
-        val nodeHash128bit = CassandraMurmurHash.hash3_x64_128(ByteBuffer.wrap(bytes), 0, bytes.length, seed)(1)
+        val nodeHash128bit = CassandraHash.hash3_x64_128(ByteBuffer.wrap(bytes), 0, bytes.length, seed)(1)
         acc & (replica == ring.put(nodeHash128bit, replica))
       }
     }
@@ -78,7 +78,7 @@ object Hashing3 {
         throw new Exception("Replication factor more than the number of the ranges in the ring")
 
       val keyBytes = key.getBytes(UTF_8)
-      val keyHash  = CassandraMurmurHash.hash3_x64_128(ByteBuffer.wrap(keyBytes), 0, keyBytes.length, seed)(1)
+      val keyHash  = CassandraHash.hash3_x64_128(ByteBuffer.wrap(keyBytes), 0, keyBytes.length, seed)(1)
 
       val r             = localRing.tailMap(keyHash)
       val tillEnd       = r.values.asScala
@@ -148,7 +148,7 @@ object Hashing3 {
         val keyBytes       = key.getBytes(UTF_8)
         val nodeBytes      = toBinary(node)
         val byteBuffer     = ByteBuffer.allocate(keyBytes.length + nodeBytes.length).put(keyBytes).put(nodeBytes)
-        val nodeHash128bit = CassandraMurmurHash.hash3_x64_128(byteBuffer, 0, byteBuffer.array.length, seed)(1)
+        val nodeHash128bit = CassandraHash.hash3_x64_128(byteBuffer, 0, byteBuffer.array.length, seed)(1)
         candidates = candidates + (nodeHash128bit → node)
       }
       candidates.take(rf).map(_._2)
