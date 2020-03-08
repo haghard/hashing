@@ -16,7 +16,8 @@ object Dependencies {
 
     val shapeless = "com.chuusai" %% "shapeless" % "2.3.3"
 
-    val cats = "org.typelevel" %% "cats" % "0.9.0"
+    val cats = "org.typelevel" %% "cats-core" % "2.1.0"
+    //"org.typelevel" %% "cats" % "0.9.0"
 
     //val trace = Seq("org.apache.htrace" % "htrace-core4" % "4.3.0-SNAPSHOT", "org.apache.htrace" % "htrace-zipkin" % "4.3.0-SNAPSHOT")
 

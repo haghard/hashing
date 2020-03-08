@@ -70,9 +70,7 @@ object CompareHashing {
   }
 
   def iter(router: HashingRouter[String, _], distribution: Map[String, AtomicInteger]) = {
-    (0 until keysNum).foreach { i ⇒
-      distribution.get(router.nodeFor(s"my-long-key-$i", 1)).incrementAndGet()
-    }
+    (0 until keysNum).foreach(i ⇒ distribution.get(router.nodeFor(s"my-long-key-$i", 1)).incrementAndGet())
 
     val iter = distribution.entrySet().iterator()
     while (iter.hasNext) {
@@ -89,9 +87,7 @@ object CompareHashing {
       distribution.remove(node)
     }
 
-    (0 until keysNum).foreach { i ⇒
-      distribution.get(router.nodeFor(s"my-long-key-$i", 1)).incrementAndGet()
-    }
+    (0 until keysNum).foreach(i ⇒ distribution.get(router.nodeFor(s"my-long-key-$i", 1)).incrementAndGet())
 
     println("====== stats ========")
     val iter1 = distribution.entrySet.iterator

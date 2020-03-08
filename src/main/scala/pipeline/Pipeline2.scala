@@ -31,9 +31,7 @@ object Pipeline2 {
       new Flow[TH :+: TT, AH :+: AT, BH :+: BT] {
         final override type Out = F[BH] :+: OT
         final override def apply(alg: String, payload: String): Out =
-          head(alg, payload).fold({ _ ⇒
-            Inr(tail(alg, payload))
-          }, s ⇒ Inl(s))
+          head(alg, payload).fold(_ ⇒ Inr(tail(alg, payload)), s ⇒ Inl(s))
       }
 
     implicit class Ops[TT <: Coproduct, AT <: Coproduct, BT <: Coproduct, OT <: Coproduct](
@@ -103,7 +101,8 @@ object Pipeline2 {
             val r: F[Unit]     = F.map(computed)(sink)
             //r
             computed
-          } else Left(())
+          }
+          else Left(())
         }
       }
     }
@@ -118,21 +117,13 @@ object Pipeline2 {
     implicit val b = new Algorithm[Two]   { override val name = "two"   }
     implicit val c = new Algorithm[Three] { override val name = "three" }
 
-    implicit val src = Source[Option, Int] { line: String ⇒
-      Option(line.length)
-    }
+    implicit val src = Source[Option, Int] { line: String ⇒ Option(line.length) }
 
-    implicit val src0 = Source[cats.Id, Int] { line: String ⇒
-      line.length
-    }
+    implicit val src0 = Source[cats.Id, Int] { line: String ⇒ line.length }
 
-    implicit val map = Transformation { v: Int ⇒
-      v * -1
-    }
+    implicit val map = Transformation { v: Int ⇒ v * -1 }
 
-    implicit val consoleSink = Sink[Int] { v: Int ⇒
-      println(s"out > $v")
-    }
+    implicit val consoleSink = Sink[Int] { v: Int ⇒ println(s"out > $v") }
 
   }
 

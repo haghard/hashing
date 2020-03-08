@@ -13,7 +13,8 @@ object CompareHashing2 {
   val iterNum = 500000
 
   val nodes0 = "alpha" :: "beta" :: "gamma" :: "delta" :: Nil
-  val nodes  = "alpha" :: "beta" :: "gamma" :: "delta" :: "epsilon" :: "zeta" :: "eta" :: "theta" :: "iota" :: "kappa" :: Nil
+  val nodes =
+    "alpha" :: "beta" :: "gamma" :: "delta" :: "epsilon" :: "zeta" :: "eta" :: "theta" :: "iota" :: "kappa" :: Nil
 
   val rnd = java.util.concurrent.ThreadLocalRandom.current
 

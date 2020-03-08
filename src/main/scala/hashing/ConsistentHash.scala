@@ -161,11 +161,7 @@ class Runner {
       }
     }
 
-    printToFile(new File("dat"))(p ⇒ {
-      data.foreach(tup ⇒ {
-        p.println("%s\t%s".format(tup._1, tup._2))
-      })
-    })
+    printToFile(new File("dat"))(p ⇒ data.foreach(tup ⇒ p.println("%s\t%s".format(tup._1, tup._2))))
   }
 
   def run(numobjects: Int, vnodes: Int) = {
@@ -198,10 +194,10 @@ class Runner {
     val stats = stat(ch, objects)
     // we already know the total number of objects, and can cheat to get the mean
     val mean = numobjects / ch.ringSize
-    val sqDistFromMean = stats.map(opc ⇒ {
+    val sqDistFromMean = stats.map { opc ⇒
       debug("%s of %s / size(%s) = Mean(%s)".format(opc, numobjects, ch.ringSize, mean))
       sq(mean - opc)
-    })
+    }
     debug("%s".format(sqDistFromMean))
     val variance: Double = sqDistFromMean.sum / ch.ringSize
     debug("Variance: %s".format(variance))

@@ -55,7 +55,8 @@ object Pipelines {
             val in       = read(input)
             val computed = F.map(in)(computation)
             F.map(computed)(write)
-          } else Left(input)
+          }
+          else Left(input)
         }
       }
     }
@@ -79,15 +80,9 @@ object Pipelines {
     override def segment: String = "three"
   }
 
-  implicit val src = Source[Option, Int] { (line: String) ⇒
-    Option(line.length)
-  }
-  implicit val map = Transformation { (v: Int) ⇒
-    v * -1
-  }
-  implicit val sink = Sink[Int] { (v: Int) ⇒
-    println(s"out > $v")
-  }
+  implicit val src  = Source[Option, Int]((line: String) ⇒ Option(line.length))
+  implicit val map  = Transformation((v: Int) ⇒ v * -1)
+  implicit val sink = Sink[Int]((v: Int) ⇒ println(s"out > $v"))
 
   val pipelines =
     Pipeline[One, Option, Int, Int]

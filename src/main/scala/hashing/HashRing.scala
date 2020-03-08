@@ -106,9 +106,7 @@ object HashRing {
   ): HashRing =
     HashRing(
       (start until end by step)
-        .foldLeft(SortedMap[Long, String]()) { (acc, c) ⇒
-          acc + (c → name)
-        },
+        .foldLeft(SortedMap[Long, String]())((acc, c) ⇒ acc + (c → name)),
       start,
       end,
       step

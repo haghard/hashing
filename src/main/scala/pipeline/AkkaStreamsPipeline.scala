@@ -42,9 +42,7 @@ object AkkaStreamsPipeline {
       import GraphDSL.Implicits._
       val broadcast = builder.add(Broadcast[Data](specsSize))
       val merge     = builder.add(Merge[Data](specsSize))
-      stages.map(toFlow).toList.foreach { flow ⇒
-        broadcast ~> flow ~> merge
-      }
+      stages.map(toFlow).toList.foreach(flow ⇒ broadcast ~> flow ~> merge)
 
       FlowShape(broadcast.in, merge.out)
     }
