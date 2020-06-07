@@ -60,24 +60,23 @@ class ConsistentHash[K <% Ordered[K], V] private (
   /**
     * @return the cache node that will contain our object, by key.
     */
-  def get(key: Option[AnyRef]): Option[V] = ring.isEmpty match {
-    case true ⇒ throw new RuntimeException("No nodes in ring")
-    case false ⇒ {
-      key
-        .map { k ⇒
-          hashFunction.hash(k) match {
-            case hash if (!ring.containsKey(hash)) ⇒ {
-              ring.tailMap(hash) match {
-                case tailMap if (tailMap.isEmpty) ⇒ Some(ring.get(ring.firstKey))
-                case tailMap                      ⇒ Some(ring.get(tailMap.firstKey))
-              }
+  def get(key: Option[AnyRef]): Option[V] =
+    ring.isEmpty match {
+      case true ⇒ throw new RuntimeException("No nodes in ring")
+      case false ⇒
+        key
+          .map { k ⇒
+            hashFunction.hash(k) match {
+              case hash if !ring.containsKey(hash) ⇒
+                ring.tailMap(hash) match {
+                  case tailMap if tailMap.isEmpty ⇒ Some(ring.get(ring.firstKey))
+                  case tailMap                    ⇒ Some(ring.get(tailMap.firstKey))
+                }
+              case hash ⇒ Some(ring.get(hash))
             }
-            case hash ⇒ Some(ring.get(hash))
           }
-        }
-        .getOrElse(None)
+          .getOrElse(None)
     }
-  }
 
   def ringSize(): Int = numNodes
 }
@@ -100,9 +99,8 @@ class MD5HashFunction extends HashFunction[String] {
   private[this] def byteArrayToString(data: Array[Byte]): String = {
     val bigInteger = new BigInteger(1, data)
     var hash       = bigInteger.toString(16)
-    while (hash.length() < 32) {
+    while (hash.length() < 32)
       hash = "0" + hash
-    }
     hash
   }
 
@@ -154,11 +152,8 @@ class Runner {
 
     def printToFile(f: java.io.File)(op: java.io.PrintWriter ⇒ Unit) {
       val p = new java.io.PrintWriter(f)
-      try {
-        op(p)
-      } finally {
-        p.close()
-      }
+      try op(p)
+      finally p.close()
     }
 
     printToFile(new File("dat"))(p ⇒ data.foreach(tup ⇒ p.println("%s\t%s".format(tup._1, tup._2))))
@@ -182,10 +177,8 @@ class Runner {
         Cache("kappa")
       )
     )
-    val rand = new Random(System.currentTimeMillis())
-    val objects: IndexedSeq[CachableThingy] = for { i ← 0 until numobjects } yield {
-      CachableThingy(rand.nextInt(10000))
-    }
+    val rand                                = new Random(System.currentTimeMillis())
+    val objects: IndexedSeq[CachableThingy] = for { i ← 0 until numobjects } yield CachableThingy(rand.nextInt(10000))
 
     // mean: average
     // variance: average of the squared differences from the mean.

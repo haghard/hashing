@@ -2,7 +2,6 @@ package hashing
 
 import scala.collection.immutable.SortedMap
 
-
 /*
   Take ownership over sub ranges within [-2 to 63  ...  2 to 63 - 1]
   This is an immutable data structure, therefore all modification operations return new instance.
@@ -41,10 +40,10 @@ final case class HashRing(private val ring: SortedMap[Long, String], start: Long
   /**
     * Alias for [[remove]] method
     */
-  def :-(node: String): Option[(HashRing, List[Long])] =
+  def :-(node: String): Option[HashRing] =
     remove(node)
 
-  def remove(node: String): Option[(HashRing, List[Long])] =
+  def remove(node: String): Option[HashRing] =
     if (!nodes.contains(node))
       None
     else {
@@ -57,7 +56,7 @@ final case class HashRing(private val ring: SortedMap[Long, String], start: Long
           else ring - (h, t.head, t.tail: _*)
       }
 
-      Some(HashRing(m, start, end, step) → ranges(node))
+      Some(HashRing(m, start, end, step))
     }
 
   def lookup(hash: Long, rf: Int = 1): Vector[String] =
