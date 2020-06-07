@@ -17,9 +17,8 @@ object HashingReflection {
 
     def withNodes(nodes: util.Collection[T]): Hashing[T] = {
       val iter = nodes.iterator
-      while (iter.hasNext) {
+      while (iter.hasNext)
         addNode(iter.next)
-      }
       this
     }
 
@@ -46,9 +45,9 @@ object HashingReflection {
     }
 
     override def addNode(node: String): Boolean =
-      if (validated(node)) {
+      if (validated(node))
         members.add(node)
-      } else false
+      else false
 
     override def get(key: String, rf: Int): Set[String] = {
       var allHashes = SortedSet.empty[Item]((x: Item, y: Item) ⇒ -x.hash.compare(y.hash))

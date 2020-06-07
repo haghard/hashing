@@ -20,9 +20,8 @@ object Hashing {
 
     def initNodes(nodes: util.Collection[Node]): Unit = {
       val iter = nodes.iterator
-      while (iter.hasNext) {
+      while (iter.hasNext)
         addNode(iter.next)
-      }
     }
 
     def toBinary(node: Node): Array[Byte]
@@ -49,10 +48,10 @@ object Hashing {
     }
 
     override def addNode(node: Node): Boolean =
-      if (validate(node)) {
+      if (validate(node))
         //println(s"add $node")
         members.add(node)
-      } else false
+      else false
 
     override def nodeFor(key: String, rf: Int): Set[Node] = {
       var allHashes = SortedSet.empty[Item]((x: Item, y: Item) ⇒ -x.hash.compare(y.hash))

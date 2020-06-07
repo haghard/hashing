@@ -7,24 +7,27 @@ object Pipelines {
 
   trait Source[F[_], In] extends (String ⇒ F[In])
   object Source {
-    def apply[F[_], In](f: String ⇒ F[In]) = new Source[F, In] {
-      override def apply(v: String): F[In] = f(v)
-    }
+    def apply[F[_], In](f: String ⇒ F[In]) =
+      new Source[F, In] {
+        override def apply(v: String): F[In] = f(v)
+      }
   }
 
   trait Transformation[In, Out] extends (In ⇒ Out)
 
   object Transformation {
-    def apply[In, Out](f: In ⇒ Out) = new Transformation[In, Out] {
-      override def apply(v: In): Out = f(v)
-    }
+    def apply[In, Out](f: In ⇒ Out) =
+      new Transformation[In, Out] {
+        override def apply(v: In): Out = f(v)
+      }
   }
 
   trait Sink[Out] extends (Out ⇒ Unit)
   object Sink {
-    def apply[Out](f: Out ⇒ Unit) = new Sink[Out] {
-      override def apply(v: Out): Unit = f(v)
-    }
+    def apply[Out](f: Out ⇒ Unit) =
+      new Sink[Out] {
+        override def apply(v: Out): Unit = f(v)
+      }
   }
 
   //For each Pipeline there is a Filter with a segment
@@ -39,8 +42,8 @@ object Pipelines {
 
   //Input -> Computation -> Output
   object Pipeline {
-    def apply[T: Filter, F[_]: cats.Functor, In, Out](
-      implicit read: Source[F, In],
+    def apply[T: Filter, F[_]: cats.Functor, In, Out](implicit
+      read: Source[F, In],
       computation: Transformation[In, Out],
       write: Sink[Out]
     ) = {

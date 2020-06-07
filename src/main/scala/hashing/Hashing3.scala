@@ -180,38 +180,41 @@ object Hashing3 {
   object HashBuilder {
 
     implicit object a extends HashBuilder[ConsistentForStrings] {
-      override def replicas(replicas: Set[String]): Consistent[String] = new Consistent[String] {
+      override def replicas(replicas: Set[String]): Consistent[String] =
+        new Consistent[String] {
 
-        replicas.foreach(add(_))
+          replicas.foreach(add(_))
 
-        override val name: String = "consistent-hashing for string"
+          override val name: String = "consistent-hashing for string"
 
-        override def toBinary(node: String): Array[Byte] =
-          node.getBytes(UTF_8)
-      }
+          override def toBinary(node: String): Array[Byte] =
+            node.getBytes(UTF_8)
+        }
     }
 
     implicit object b extends HashBuilder[ConsistentForLongs] {
-      override def replicas(replicas: Set[Long]): Consistent[Long] = new Consistent[Long] {
+      override def replicas(replicas: Set[Long]): Consistent[Long] =
+        new Consistent[Long] {
 
-        replicas.foreach(add(_))
+          replicas.foreach(add(_))
 
-        override val name: String = "consistent-hashing for longs"
+          override val name: String = "consistent-hashing for longs"
 
-        override def toBinary(node: Long): Array[Byte] =
-          node.toHexString.getBytes(UTF_8)
-      }
+          override def toBinary(node: Long): Array[Byte] =
+            node.toHexString.getBytes(UTF_8)
+        }
     }
 
     implicit object c extends HashBuilder[RendezvousForStrings] {
-      override def replicas(replicas: Set[String]): Rendezvous[String] = new Rendezvous[String] {
+      override def replicas(replicas: Set[String]): Rendezvous[String] =
+        new Rendezvous[String] {
 
-        replicas.foreach(add(_))
+          replicas.foreach(add(_))
 
-        override val name: String = "rendezvous for string"
-        override def toBinary(node: String): Array[Byte] =
-          node.getBytes(UTF_8)
-      }
+          override val name: String = "rendezvous for string"
+          override def toBinary(node: String): Array[Byte] =
+            node.getBytes(UTF_8)
+        }
     }
 
     def apply[T <: HashTypesModule: HashBuilder]: HashBuilder[T] =

@@ -22,9 +22,8 @@ object Hashing2 {
 
     def withNodes(nodes: util.Collection[Node]): Hashing[Node] = {
       val iter = nodes.iterator
-      while (iter.hasNext) {
+      while (iter.hasNext)
         addNode(iter.next)
-      }
       this
     }
 
@@ -120,7 +119,7 @@ object Hashing2 {
 
     override def addNode(node: Node): Boolean =
       //Hash each node several times (VNodes)
-      if (validated(node)) {
+      if (validated(node))
         (0 to numberOfVNodes).foldLeft(true) { (acc, i) ⇒
           val suffix = Array.ofDim[Byte](4)
           writeInt(suffix, i, 0)
@@ -128,12 +127,12 @@ object Hashing2 {
           val nodeHash128bit = CassandraMurmurHash.hash3_x64_128(ByteBuffer.wrap(bytes), 0, bytes.length, seed)(1)
           acc & (node == ring.put(nodeHash128bit, node))
         }
-      } else false
+      else false
 
     override def nodeFor(key: String, rf: Int): Set[Node] = {
       val localRing = ring
       if (rf > localRing.keySet.size / numberOfVNodes)
-        throw new Exception("Replication factor more than the number of the ranges in the ring")
+        throw new Exception("Replication factor more than the number of ranges in the ring")
 
       val keyBytes = key.getBytes(UTF_8)
       val keyHash  = CassandraMurmurHash.hash3_x64_128(ByteBuffer.wrap(keyBytes), 0, keyBytes.length, seed)(1)
@@ -149,7 +148,7 @@ object Hashing2 {
       val sb   = new StringBuilder
 
       var prevKey = Long.MinValue
-      while (iter.hasNext) {
+      while (iter.hasNext)
         if (prevKey == Long.MinValue)
           prevKey = iter.next
         else {
@@ -158,7 +157,6 @@ object Hashing2 {
           sb.append(s"${key} - ${prevKey} = $diff").append("\n")
           prevKey = key
         }
-      }
       sb.toString
     }
 
@@ -224,17 +222,19 @@ object Hashing2 {
   }*/
 
   object Consistent {
-    implicit def instance: Consistent[String] = new Consistent[String] {
-      override def toBinary(node: String): Array[Byte] = node.getBytes(UTF_8)
-      override def validated(node: String): Boolean    = true
-    }
+    implicit def instance: Consistent[String] =
+      new Consistent[String] {
+        override def toBinary(node: String): Array[Byte] = node.getBytes(UTF_8)
+        override def validated(node: String): Boolean    = true
+      }
   }
 
   object Rendezvous {
-    implicit def instance: Rendezvous[String] = new Rendezvous[String] {
-      override def toBinary(node: String): Array[Byte] = node.getBytes(UTF_8)
-      override def validated(node: String): Boolean    = true
-    }
+    implicit def instance: Rendezvous[String] =
+      new Rendezvous[String] {
+        override def toBinary(node: String): Array[Byte] = node.getBytes(UTF_8)
+        override def validated(node: String): Boolean    = true
+      }
 
     /*implicit def instance1 = new Rendezvous[Int] {
       override def toBinary(node: Int): Array[Byte] = "node".getBytes("UTF-8")
@@ -251,7 +251,7 @@ object Hashing2 {
 
   object HashingRouter {
 
-    //HashingRouter.create2[Consistent, String]
+    //HashingRouter.create2[String, Consistent]
     def create2[A, F[_]](implicit tag: ClassTag[A], hashAlg: F[A]): F[A] =
       hashAlg
 
@@ -322,6 +322,6 @@ object Hashing2 {
     r.alg
     //???
   }
- */
+   */
 
 }

@@ -2,7 +2,12 @@ package hashing
 
 import scala.collection.immutable.SortedMap
 
-case class HashRing(private val ring: SortedMap[Long, String], start: Long, end: Long, step: Long) {
+
+/*
+  Take ownership over sub ranges within [-2 to 63  ...  2 to 63 - 1]
+  This is an immutable data structure, therefore all modification operations return new instance.
+ */
+final case class HashRing(private val ring: SortedMap[Long, String], start: Long, end: Long, step: Long) {
 
   /**
     * Alias for [[add]] method
@@ -21,39 +26,38 @@ case class HashRing(private val ring: SortedMap[Long, String], start: Long, end:
     if (nodes.contains(node))
       None
     else {
-      // this could be improved e.g. we should rely on least taken resources
       val ringStep = nodes.size + 1
-      val takeOvers = ((step * ringStep) until end by (step * ringStep))
+      val takeOvers = (start + (step * nodes.size) until end by (step * ringStep))
         .map(pId ⇒ (pId, lookup(pId).head))
         .toSet
 
       val updatedRing = takeOvers.foldLeft(ring) {
-        case (acc, (pId, _)) ⇒ acc.updated(pId, node)
+        case (ring, (pId, _)) ⇒ ring.updated(pId, node)
       }
 
-      Option(HashRing(updatedRing, start, end, step) → takeOvers)
+      Some(HashRing(updatedRing, start, end, step) → takeOvers)
     }
 
   /**
     * Alias for [[remove]] method
     */
-  def :-(node: String): Option[HashRing] =
+  def :-(node: String): Option[(HashRing, List[Long])] =
     remove(node)
 
-  def remove(node: String): Option[HashRing] =
+  def remove(node: String): Option[(HashRing, List[Long])] =
     if (!nodes.contains(node))
       None
     else {
       val m = ranges(node) match {
         case Nil ⇒ ring
-        case list ⇒
-          if (list.size == 1) ring - list(0)
-          else if (list.size == 2) ring - (list(0), list(1))
-          else if (list.size == 3) ring - (list(0), list(1), list(2))
-          else ring - (list(0), list(1), list.splitAt(2)._2: _*)
+        case h :: t ⇒
+          if (t.size == 0) ring - h
+          else if (t.size == 1) ring - (h, t.head)
+          else if (t.size == 2) ring - (h, t.head, t(1))
+          else ring - (h, t.head, t.tail: _*)
       }
 
-      Some(HashRing(m, start, end, step))
+      Some(HashRing(m, start, end, step) → ranges(node))
     }
 
   def lookup(hash: Long, rf: Int = 1): Vector[String] =
@@ -74,13 +78,18 @@ case class HashRing(private val ring: SortedMap[Long, String], start: Long, end:
     ring.groupBy(_._2).mapValues(_.keys.toList.sorted)
 
   def showSubRange(startKey: Long, endKey: Long): String = {
-    var cur  = startKey
-    val sb   = new StringBuilder
+    var cur = startKey
+    val sb  = new StringBuilder
+    sb.append("\n")
+      .append("Shard")
+      .append("\t\t\t")
+      .append("Token")
+      .append("\n")
     val iter = ring.keysIteratorFrom(startKey)
     while (iter.hasNext && cur <= endKey) {
       val key = iter.next
       cur = key
-      sb.append(s"[${key}: ${ring(key)}]").append("->")
+      sb.append(key).append("\t\t").append(ring(key)).append("\n")
     }
     sb.toString
   }
@@ -112,3 +121,4 @@ object HashRing {
       step
     )
 }
+//val h = HashRing("a", -8, 8, 2)

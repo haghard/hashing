@@ -24,8 +24,10 @@ object Pipeline2 {
         override def apply(alg: String, payload: String): Out = Inl(())
       }
 
-    implicit def inductivePipeline[TH, F[_], AH, BH, TT <: Coproduct, AT <: Coproduct, BT <: Coproduct, OT <: Coproduct](
-      implicit head: Flow.Aux[TH, AH, BH, Flow.Out[F, BH]],
+    implicit def inductivePipeline[TH, F[
+      _
+    ], AH, BH, TT <: Coproduct, AT <: Coproduct, BT <: Coproduct, OT <: Coproduct](implicit
+      head: Flow.Aux[TH, AH, BH, Flow.Out[F, BH]],
       tail: Flow.Aux[TT, AT, BT, OT]
     ): Flow.Aux[TH :+: TT, AH :+: AT, BH :+: BT, F[BH] :+: OT] =
       new Flow[TH :+: TT, AH :+: AT, BH :+: BT] {
@@ -83,8 +85,8 @@ object Pipeline2 {
     type Aux[T, A, B, O]        = Flow[T, A, B] { type Out = O }
     type Default[T, F[_], A, B] = Aux[T, A, B, Either[Unit, F[B]]]
 
-    final def apply[T: Algorithm, F[_]: Functor, A, B](
-      implicit src: Source[F, A],
+    final def apply[T: Algorithm, F[_]: Functor, A, B](implicit
+      src: Source[F, A],
       T: Transformation[A, B],
       sink: Sink[B]
     ): Default[T, F, A, B] = {
@@ -113,8 +115,8 @@ object Pipeline2 {
   trait Three
 
   object allImplicits {
-    implicit val a = new Algorithm[One]   { override val name = "one"   }
-    implicit val b = new Algorithm[Two]   { override val name = "two"   }
+    implicit val a = new Algorithm[One] { override val name = "one" }
+    implicit val b = new Algorithm[Two] { override val name = "two" }
     implicit val c = new Algorithm[Three] { override val name = "three" }
 
     implicit val src = Source[Option, Int] { line: String ⇒ Option(line.length) }
