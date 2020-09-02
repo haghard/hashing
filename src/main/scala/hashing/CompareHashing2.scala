@@ -8,6 +8,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import hashing.Hashing2.{Consistent, Hashing, Rendezvous}
 
 //runMain hashing.CompareHashing2
+//https://github.com/clohfink/RendezvousHash/blob/master/src/main/java/com/csforge/Compare.java
 object CompareHashing2 {
 
   val iterNum = 500000
