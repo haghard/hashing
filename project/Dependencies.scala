@@ -16,7 +16,7 @@ object Dependencies {
 
     val shapeless = "com.chuusai" %% "shapeless" % "2.3.3"
 
-    val cats = "org.typelevel" %% "cats-core" % "2.1.0"
+    val cats = "org.typelevel" %% "cats-core" % "2.1.1"
     //"org.typelevel" %% "cats" % "0.9.0"
 
     //val trace = Seq("org.apache.htrace" % "htrace-core4" % "4.3.0-SNAPSHOT", "org.apache.htrace" % "htrace-zipkin" % "4.3.0-SNAPSHOT")
@@ -29,7 +29,7 @@ object Dependencies {
     val intervalset = "com.rklaehn" %% "intervalset" % "0.2.0"
 
     //test:run
-    val ammonite = ("com.lihaoyi" % "ammonite" % "2.1.4" % "test").cross(CrossVersion.full)
+    val ammonite = ("com.lihaoyi" % "ammonite" % "2.2.0" % "test").cross(CrossVersion.full)
 
     //val jumpCH = "testanythinghere" %% "testanythinghere" % "0.1"
 
