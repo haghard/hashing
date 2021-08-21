@@ -105,14 +105,12 @@ object HashingReflection {
   implicit class Routers[T](val nodes: util.Collection[T]) extends AnyVal {
 
     /**
-      *
       *  val nodes = java.util.Arrays.asList("a", "b")
       *  nodes.router[Rendezvous]  - success
       *
       *  val nodes = java.util.Arrays.asList(1, 2)
       *  nodes.router[Rendezvous]  - compilation error
       *  error: type arguments [hashing.Rendezvous] do not conform to method router's type parameter bounds [A <: Hashing[Int]]
-      *
       */
     def router[A <: Hashing[T]: ClassTag] = {
       val ref = implicitly[ClassTag[A]].runtimeClass.newInstance().asInstanceOf[A]

@@ -15,7 +15,6 @@ final case class HashRing(private val ring: SortedMap[Long, String], start: Long
     add(node)
 
   /**
-    *
     * Adds a node to the node ring.
     * Note that the instance is immutable and this operation returns a new instance.
     *
@@ -30,8 +29,8 @@ final case class HashRing(private val ring: SortedMap[Long, String], start: Long
         .map(pId ⇒ (pId, lookup(pId).head))
         .toSet
 
-      val updatedRing = takeOvers.foldLeft(ring) {
-        case (ring, (pId, _)) ⇒ ring.updated(pId, node)
+      val updatedRing = takeOvers.foldLeft(ring) { case (ring, (pId, _)) ⇒
+        ring.updated(pId, node)
       }
 
       Some(HashRing(updatedRing, start, end, step) → takeOvers)

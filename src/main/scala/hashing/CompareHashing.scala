@@ -32,7 +32,6 @@ import zipkin.reporter.okhttp3.OkHttpSender
   *   twoPhase.finish();
   * }
   * }</pre>
-  *
   */
 import hashing.Hashing.{ConsistentHashing, HashingRouter, RendezvousHashing}
 
