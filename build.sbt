@@ -9,7 +9,7 @@ libraryDependencies ++= Dependencies.Test.all
 
 updateOptions := updateOptions.value.withCachedResolution(true)
 
-resolvers += "Akka Snapshot Repository" at "http://repo.akka.io/snapshots/"
+resolvers += "Akka Snapshot Repository" at "https://repo.akka.io/snapshots/"
 resolvers += Resolver.bintrayRepo("stanch", "maven")
 
 promptTheme := ScalapenosTheme

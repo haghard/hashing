@@ -16,13 +16,13 @@ object Dependencies {
 
     val shapeless = "com.chuusai" %% "shapeless" % "2.3.3"
 
-    val cats = "org.typelevel" %% "cats-core" % "2.1.0"
+    val cats = "org.typelevel" %% "cats-core" % "2.3.1"
     //"org.typelevel" %% "cats" % "0.9.0"
 
     //val trace = Seq("org.apache.htrace" % "htrace-core4" % "4.3.0-SNAPSHOT", "org.apache.htrace" % "htrace-zipkin" % "4.3.0-SNAPSHOT")
 
     //val sourceCode = "com.lihaoyi" %% "sourcecode" % "0.1.3"
-    val reftree = "org.stanch" %% "reftree" % "1.0.0"
+    //val reftree = "org.stanch" %% "reftree" % "1.0.0"
 
     val algebird = "com.twitter" %% "algebird-core" % "0.13.0"
 
@@ -34,12 +34,13 @@ object Dependencies {
     //val jumpCH = "testanythinghere" %% "testanythinghere" % "0.1"
 
     val all = Seq(brave, zipkinSender, opentracing, simulacrum, cats, shapeless,
-      reftree, akkaStream, algebird, ammonite)
+      //reftree,
+      akkaStream, algebird, ammonite)
   }
 
   object Test {
     //val akkaTestkit = "com.typesafe.akka" %% "akka-testkit" % akkaVersion % "test"
-    val scalatest = "org.scalatest" %% "scalatest" % "3.1.1" % "test"
+    val scalatest = "org.scalatest" %% "scalatest" % "3.1.2" % "test"
     val all = Seq(scalatest)
   }
 

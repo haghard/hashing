@@ -23,3 +23,5 @@ http://www.lexemetech.com/2007/11/consistent-hashing.html
 https://www.youtube.com/watch?v=tHEyzVbl4bg&list=PLbZ2T3O9BuvczX5j03bWMrMFzK5OAs9mZ&index=483&t=0s
 
 https://medium.com/better-programming/load-balancers-and-consistent-hashing-in-6-minutes-b5fc460aea4e
+
+https://www.infoq.com/articles/dynamo-riak-random-slicing/
